@@ -9,7 +9,11 @@ if [ -z $1 ]; then
   exit 1
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 FILEPREFIX=openssl-
@@ -28,7 +32,7 @@ if [ ! -e $ZIP ]; then
   exit 2
 fi
 
-tar -xvzkf $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
   exit 3
 fi
@@ -49,7 +53,7 @@ build()
   perl Configure $1 -mtune=$2 $3 \
     no-aria no-blake2 no-camellia no-capieng no-cast no-cmac no-cmp no-cms \
     no-comp no-deprecated no-des no-devcryptoeng no-dh no-dsa no-dso no-dtls1 \
-    no-dynamic-engine no-ecdh no-engine no-external-tests no-filenames \
+    no-dynamic-engine  no-engine no-external-tests no-filenames \
     no-gost no-idea no-legacy no-makedepend no-md4 no-mdc2 no-module no-ocb \
     no-pic no-pinshared no-rc2 no-rc4 no-rmd160 no-scrypt no-seed no-shared \
     no-siphash no-siv no-sm2 no-sm3 no-sm4 no-srp no-srtp no-ssl-trace \
@@ -61,7 +65,7 @@ build()
     exit 5
   fi
 
-  make
+  make -j"$BUILD_JOBS"
   if [ $? -ne 0 ]; then
     exit 6
   fi
@@ -106,7 +110,7 @@ build()
 PLATFORM=$(uname)
 if [ "$PLATFORM" == 'Linux' ]; then
   build linux-x86_64 generic "" l64
-  ar rcs "${LIB}/ssl64.la" ssl64-*.a
+  cp -f ssl64-linux-x86_64-generic.a "${LIB}/ssl64.la"
 else
   build darwin64-x86_64 generic -mmacosx-version-min=10.15 o32
   build darwin64-arm64 apple-m1 -mmacosx-version-min=11.0 o64
@@ -116,3 +120,14 @@ fi
 if [ $? -ne 0 ]; then
   exit 13
 fi
+
+install_headers "$BASE/include/openssl" "$BASE/$FILE/include/openssl" || exit 14
+if [ "$PLATFORM" = 'Linux' ]; then
+  OPENSSL_CONFIG=l64
+elif [ "$(uname -m)" = 'arm64' ]; then
+  OPENSSL_CONFIG=o64
+else
+  OPENSSL_CONFIG=o32
+fi
+cp -f "$BASE/include/openssl/configuration-${OPENSSL_CONFIG}.h" \
+  "$BASE/include/openssl/configuration.h" || exit 15

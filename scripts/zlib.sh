@@ -9,12 +9,16 @@ if [ -z $1 ]; then
   exit 7
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 FILEPREFIX=zlib-
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.tar.xz
+ZIP=$ARCHIVE/$FILE.tar.gz
 
 if [ ! -e $ZIP ]; then
   echo Error: $ZIP not found!
@@ -26,7 +30,7 @@ if [ ! -e $ZIP ]; then
   exit 8
 fi
 
-tar -xvzkf $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
   exit 9
 fi
@@ -41,23 +45,23 @@ build()
   make clean 2>/dev/null
 
 
-  ./configure --static \
-              --archs="-arch ${1}"
+  ./configure --static 
+              # --archs="-arch ${1}"
   if [ ! $? -eq 0 ]; then
     exit 11
   fi
 
-  mv -fv Makefile Makefile.patch
-  if [ ! $? -eq 0 ]; then
-    exit 12
-  fi
-  cat Makefile.patch | \
-    sed 's|-O3|-O3 -mtune='${2}' -mmacosx-version-min=10.15|g' > Makefile
-  if [ ! $? -eq 0 ]; then
-    exit 13
-  fi
+  # mv -fv Makefile Makefile.patch
+  # if [ ! $? -eq 0 ]; then
+  #   exit 12
+  # fi
+  # cat Makefile.patch | \
+  #   sed 's|-O3|-O3 -mtune='${2}' -mmacosx-version-min=10.15|g' > Makefile
+  # if [ ! $? -eq 0 ]; then
+  #   exit 13
+  # fi
 
-  make static
+  make -j"$BUILD_JOBS" static
   if [ ! $? -eq 0 ]; then
     exit 14
   fi
@@ -69,9 +73,12 @@ build()
 }
 
 build x86_64 generic
-build arm64 apple-m1
+# build arm64 apple-m1
 
-lipo zlib64-*.a -create -output "${LIB}/zlib64.ma"
+# lipo zlib64-*.a -create -output "${LIB}/zlib64.ma"
 if [ ! $? -eq 0 ]; then
   exit 16
 fi
+
+install_headers "$BASE/include/zlib" \
+  "$BASE/$FILE/zlib.h" "$BASE/$FILE/zconf.h" || exit 17

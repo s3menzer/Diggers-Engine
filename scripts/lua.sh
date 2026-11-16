@@ -8,7 +8,11 @@
 if [ -z $1 ]; then echo Usage: $0 [version]; exit 1; fi
 
 # Base directory
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 # Archives directory
 ARCHIVE=$BASE/archive
 # Libraries directory
@@ -36,7 +40,7 @@ fi
 
 # Extract tarball and exit if failed
 echo "*** Extracting $ZIP ***"
-tar -xvzkf $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then exit 3; fi
 
 # Switch to archive directory and exit if failed
@@ -157,4 +161,5 @@ else
 fi
 
 # Success
+install_headers "$BASE/include/lua" "$BASE/$FILE/src"/*.h || exit 18
 echo "*** Completed ***"

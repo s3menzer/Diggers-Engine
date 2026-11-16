@@ -1,6 +1,13 @@
 *
 !.gitignore
+!.build-helpers/
+!.build-helpers/**
 !*.md
+!.github/
+!.github/workflows/
+!.github/workflows/build.yml
+!docker/
+!docker/Dockerfile.linux
 !docs/
 !docs/*.html
 !docs/*.md

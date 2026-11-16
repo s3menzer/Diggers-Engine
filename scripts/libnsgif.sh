@@ -9,7 +9,11 @@ if [ -z $1 ]; then
   exit 1;
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 FILEPREFIX=libnsgif-
@@ -26,7 +30,7 @@ if [ ! -e $ZIP ]; then
   exit 2;
 fi
 
-tar -xvzkf $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
   exit 3;
 fi
@@ -58,7 +62,7 @@ if [ "$PLATFORM" == 'Linux' ]; then
   ARCH="-D"
   EXTRA=""
   build x86_64 generic
-  mv nsgif64-*.a "${LIB}/nsgif64.la"
+  cp -f nsgif64-*.a "${LIB}/nsgif64.la"
 else
   ARCH="-arch "
   EXTRA="-mmacosx-version-min=10.15"
@@ -71,3 +75,4 @@ if [ ! $? -eq 0 ]; then
   exit 7;
 fi
 
+install_headers "$BASE/include/gif" "$BASE/$FILE/include"/*.h || exit 8

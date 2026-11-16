@@ -9,7 +9,11 @@ if [ -z $3 ]; then
   exit 1;
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 FILEPREFIX=libtheora-
@@ -18,9 +22,10 @@ FILEPREFIX3=libvorbis-
 FILE=$FILEPREFIX$1
 FILE2=$FILEPREFIX2$2
 FILE3=$FILEPREFIX3$3
-ZIP=$ARCHIVE/$FILE.tar.bz2
-ZIP2=$ARCHIVE/$FILE2.tar.xz
-ZIP3=$ARCHIVE/$FILE3.tar.xz
+ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP2=$ARCHIVE/$FILE2.tar.gz
+ZIP3=$ARCHIVE/$FILE3.tar.gz
+ISOSX=`uname`
 
 if [ ! -e $ZIP ]; then
   echo Error 1: $ZIP not found!
@@ -52,17 +57,17 @@ if [ ! -e $ZIP3 ]; then
   exit 3
 fi
 
-tar -xvzkf $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
   exit 4
 fi
 
-tar -xvzkf $ZIP2
+extract_if_missing "$FILE2" "$ZIP2"
 if [ ! $? -eq 0 ]; then
   exit 5
 fi
 
-tar -xvzkf $ZIP3
+extract_if_missing "$FILE3" "$ZIP3"
 if [ ! $? -eq 0 ]; then
   exit 5
 fi
@@ -76,20 +81,26 @@ rm -rfv *.a 2>/dev/null
 
 build()
 {
+  ./autogen.sh
+  
+  if [ $ISOSX = 'Darwin' ]; then
+    EXTRA="-arch ${1} -mtune=${2} -mmacosx-version-min=10.15"
+  fi
+
   ./configure --disable-examples --without-vorbis --disable-oggtest \
     --with-ogg-includes="../${FILE2}/include/" \
     --with-ogg-libraries="../${FILE2}" \
     --with-vorbis-includes="../${FILE3}/include/" \
     --with-vorbis-libraries="../${FILE3}" \
-    CC="gcc -O3 -arch ${1} -mtune=${2} -mmacosx-version-min=10.15"
+    CC="gcc -O3 $EXTRA"
 
-  make
+  make -j"$BUILD_JOBS"
   if [ ! $? -eq 0 ]; then
     exit 5;
   fi
 
   rm -rfv "theora64-${1}-${2}.a" 2>/dev/null
-  ar rcs "theora64-${1}-${2}.a" lib/*.o lib/.libs/*.o
+  cp -f lib/.libs/libtheora.a "theora64-${1}-${2}.a"
   if [ ! $? -eq 0 ]; then
     exit 6;
   fi
@@ -97,10 +108,17 @@ build()
   make clean 2>/dev/null
 }
 
-build arm64 apple-m1
 build x86_64 generic
 
-lipo theora64-*.a -create -output "${LIB}/theora64.ma"
+if [ $ISOSX = 'Darwin' ]; then
+  build arm64 apple-m1
+  lipo theora64-*.a -create -output "${LIB}/theora64.ma"
+else
+  cp -f theora64-x86_64-generic.a "${LIB}/theora64.la"
+fi
+
 if [ ! $? -eq 0 ]; then
   exit 7;
 fi
+
+install_headers "$BASE/include/theora" "$BASE/$FILE/include/theora" || exit 8

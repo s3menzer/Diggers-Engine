@@ -1,0 +1,49 @@
+name: Linux Docker build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Linux builder image
+        run: >-
+          docker build
+          --file .build-helpers/docker/Dockerfile.linux
+          --tag mhatxotic-engine-linux-builder:ci
+          .build-helpers/docker
+
+      - name: Check out Diggers game source
+        uses: actions/checkout@v4
+        with:
+          repository: s3menzer/Diggers
+          ref: cd556a06dec2250b3cc91563ab032899257a8e61
+          path: Diggers
+
+      - name: Build Engine helper and Diggers in Linux container
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            --user "$(id -u):$(id -g)" \
+            --env TERM=xterm \
+            --env HOME=/tmp/engine-linux-ci-home \
+            mhatxotic-engine-linux-builder:ci \
+            bash -e -u -o pipefail -c '
+              mkdir -p "$HOME"
+              python3 ./.build-helpers/scripts/download-linux-dependencies.py
+              python3 ./.build-helpers/scripts/create-build-json.py
+              mkdir -p ./bin
+              ./scripts/build-linux.sh
+              mkdir -p ./debug
+              ./bin/build.elf V
+            '

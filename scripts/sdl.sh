@@ -9,7 +9,11 @@ if [ -z $1 ]; then
   exit 1
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ISOSX=`uname`
 if [ $ISOSX = 'Darwin' ]; then
   ISOSX=1
@@ -33,7 +37,7 @@ if [ ! -e $ZIP ]; then
   exit 2
 fi
 
-tar -xvzkf $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
   exit 3
 fi
@@ -65,7 +69,7 @@ build()
     exit 7
   fi
 
-  make
+  make -j"$BUILD_JOBS"
   if [ ! $? -eq 0 ]; then
     exit 8
   fi
@@ -91,3 +95,5 @@ fi
 if [ ! $? -eq 0 ]; then
   exit 11
 fi
+
+install_headers "$BASE/include/SDL2" "$BASE/$FILE/include"/*.h || exit 12

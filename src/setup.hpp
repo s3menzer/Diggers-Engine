@@ -474,7 +474,9 @@ namespace Lib                          // LIBRARY OF EXTERNAL API FUNCTIONS
   } /* --------------------------------------------------------------------- */
   namespace NSGif                      // LIBNSGIF API FUNCTIONS
   { /* --------------------------------------------------------------------- */
-#include <gif/gif.h>                   // Main header
+    extern "C" {
+#include <gif/nsgif.h>                   // Main header
+    }
   } /* --------------------------------------------------------------------- */
   namespace Png                        // LIBPNG API FUNCTIONS
   { /* --------------------------------------------------------------------- */
@@ -557,10 +559,10 @@ namespace Lib                          // LIBRARY OF EXTERNAL API FUNCTIONS
   namespace FreeType                   // FREETYPE API FUNCTIONS
   { /* --------------------------------------------------------------------- */
 #include <ft/ft2build.h>               // Build parameters header
-#include <ft/freetype.h>               // Base header
-#include <ft/ftstroke.h>               // Stroker header
-#include <ft/ftglyph.h>                // Glyph header
-#include <ft/ftmodapi.h>               // Modification header
+#include <ft/freetype/freetype.h>               // Base header
+#include <ft/freetype/ftstroke.h>               // Stroker header
+#include <ft/freetype/ftglyph.h>                // Glyph header
+#include <ft/freetype/ftmodapi.h>               // Modification header
   } /* --------------------------------------------------------------------- */
 } /* -- Rapidjson has to be defined here because of C++23 changes ---------- */
 #define RAPIDJSON_NAMESPACE            Lib::RapidJson

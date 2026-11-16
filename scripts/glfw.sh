@@ -9,7 +9,12 @@ if [ -z $1 ]; then
   exit 1
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
+
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 FILEPREFIX=glfw-
@@ -26,7 +31,7 @@ if [ ! -e $ZIP ]; then
   exit 2
 fi
 
-unzip -n $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
   exit 3
 fi
@@ -57,7 +62,7 @@ build()
     exit 7
   fi
 
-  make
+  make -j"$BUILD_JOBS"
   if [ ! $? -eq 0 ]; then
     exit 8
   fi
@@ -88,3 +93,5 @@ fi
 if [ ! $? -eq 0 ]; then
   exit 11
 fi
+
+install_headers "$BASE/include/glfw" "$BASE/$FILE/include/GLFW" || exit 12

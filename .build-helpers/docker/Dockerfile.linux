@@ -1,0 +1,60 @@
+# Debian 13 (Trixie) ships GCC 14, which implements CWG 2518/P2593R1:
+# static_assert(false) in a discarded if constexpr branch is deferred until
+# that branch is instantiated. The Engine's Lua utility template relies on
+# this behavior. Debian 12's GCC 12 diagnoses it prematurely.
+FROM debian:trixie-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build tools and native platform/development headers used by the
+# Linux build scripts.
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y \
+        build-essential \
+        ca-certificates \
+        cmake \
+        curl \
+        libgl1-mesa-dev \
+        libglfw3-dev \
+        libjpeg62-turbo-dev \
+        libncurses-dev \
+        libogg-dev \
+        libopenal-dev \
+        libasound2-dev \
+        libpipewire-0.3-dev \
+        libpulse-dev \
+        libpng-dev \
+        libsqlite3-dev \
+        libssl-dev \
+        libtheora-dev \
+        libvorbis-dev \
+        libfreetype-dev \
+        libx11-dev \
+        libxrandr-dev \
+        libwayland-dev \
+        libxcursor-dev \
+        libxi-dev \
+        make \
+        nasm \
+        ncurses-bin \
+        zlib1g-dev \
+        perl \
+        pkg-config \
+        python3 \
+        tar \
+        tcl \
+        xz-utils \
+        7zip \
+        unzip \
+        libxkbcommon-dev \
+        libxinerama-dev \
+        ripgrep \
+        llvm \
+        autoconf \
+        automake \
+        libtool \
+    && ln -s "$(command -v 7z)" /usr/local/bin/7zz \
+    && ln -s "$(command -v llvm-lipo-19)" /usr/local/bin/lipo \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace

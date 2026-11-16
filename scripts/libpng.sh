@@ -9,15 +9,20 @@ if [ -z $2 ]; then
   exit 1
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 FILEPREFIX=libpng-
 FILEPREFIX2=zlib-
 FILE=$FILEPREFIX$1
 FILE2=$FILEPREFIX2$2
-ZIP=$ARCHIVE/$FILE.tar.xz
-ZIP2=$ARCHIVE/$FILE2.tar.xz
+ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP2=$ARCHIVE/$FILE2.tar.gz
+ISOSX=`uname`
 
 if [ ! -e $ZIP ]; then
   echo Error 1: $ZIP not found!
@@ -39,12 +44,12 @@ if [ ! -e $ZIP2 ]; then
   exit 3
 fi
 
-tar -xvzkf $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
   exit 4
 fi
 
-tar -xvzkf $ZIP2
+extract_if_missing "$FILE2" "$ZIP2"
 if [ ! $? -eq 0 ]; then
   exit 5
 fi
@@ -60,14 +65,21 @@ build()
 {
   make clean 2>/dev/null
 
-  ./configure --with-zlib-prefix="${ZLIBDIR}" \
-              CC="gcc -O3 -arch ${1} -mtune=${2} -mmacosx-version-min=10.15"
+  if [ $ISOSX = 'Darwin' ]; then
+    ./configure --with-zlib-prefix="${ZLIBDIR}" \
+                CC="gcc -O3 \
+                -arch ${1} -mtune=${2} -mmacosx-version-min=10.15"
+  else
+    ./configure --with-zlib-prefix="${ZLIBDIR}" \
+                CC="gcc -O3 "
+  fi
+
   if [ ! $? -eq 0 ]; then
     cat config.log
     exit 7
   fi
 
-  make
+  make -j"$BUILD_JOBS"
   if [ ! $? -eq 0 ]; then
     exit 8
   fi
@@ -78,10 +90,17 @@ build()
   fi
 }
 
-build arm64 apple-m1
 build x86_64 generic
+if [ $ISOSX = 'Darwin' ]; then
+  build arm64 apple-m1
+  lipo png64-*.a -create -output "${LIB}/png64.ma"
+else
+  cp -f png64-x86_64-generic.a "${LIB}/png64.la"
+fi
 
-lipo png64-*.a -create -output "${LIB}/png64.ma"
 if [ ! $? -eq 0 ]; then
   exit 10
 fi
+
+install_headers "$BASE/include/png" \
+  "$BASE/$FILE/png.h" "$BASE/$FILE/pngconf.h" "$BASE/$FILE/pnglibconf.h" || exit 11

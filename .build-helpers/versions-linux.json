@@ -1,0 +1,339 @@
+{
+  "schema_version": 3,
+  "as_of": "2026-11-18",
+  "platform": "linux",
+  "archive_directory": "archive",
+  "libs": {
+    "glfw": {
+      "version": "3.5.1",
+      "build-script": "glfw.sh",
+      "build-script-args": [
+        "$glfw-version$"
+      ],
+      "library-output": "lib/glfw64.la",
+      "header-outputs": ["include/glfw/glfw3.h", "include/glfw/glfw3native.h"],
+      "archive": {
+        "filename": "glfw-3.5.1.zip",
+        "url": "https://github.com/glfw/glfw/releases/download/3.5.1/glfw-3.5.1.zip",
+        "sha256": "ea79bc5feffc254c87291980c2d0bce9acebb68c4983b79f961dcd2cb8a611a0",
+        "format": "zip",
+        "source-root": "glfw-3.5.1",
+        "root": "glfw-3.5.1"
+      }
+    },
+    "libjpeg-turbo": {
+      "version": "3.2.1",
+      "build-script": "libjpeg.sh",
+      "build-script-args": [
+        "$libjpeg-turbo-version$"
+      ],
+      "library-output": "lib/jpeg64.la",
+      "header-outputs": ["include/jpeg/jpeglib.h", "include/jpeg/jversion.h", "include/jpeg/jconfig.h"],
+      "archive": {
+        "filename": "libjpeg-turbo-3.2.1.tar.gz",
+        "url": "https://codeload.github.com/libjpeg-turbo/libjpeg-turbo/tar.gz/7b4993786d856cbccabfc0ed2f923ba000e326cc",
+        "sha256": "e10ff4ce2943a9021f9b0398fe00029915dd4eaf32c7560e36305341ec826735",
+        "format": "tar.gz",
+        "source-root": "libjpeg-turbo-7b4993786d856cbccabfc0ed2f923ba000e326cc",
+        "root": "libjpeg-turbo-3.2.1"
+      }
+    },
+    "libnsgif": {
+      "version": "1.0.0",
+      "build-script": "libnsgif.sh",
+      "build-script-args": [
+        "$libnsgif-version$"
+      ],
+      "library-output": "lib/nsgif64.la",
+      "header-outputs": ["include/gif/nsgif.h"],
+      "archive": {
+        "filename": "libnsgif-1.0.0.tar.gz",
+        "url": "https://codeload.github.com/netsurf-browser/libnsgif/tar.gz/e97bc7b86f19ace910a2c71025ad2d94a28a1d2e",
+        "sha256": "4a209dc5cc5e9d521b389ecfe24ce90627a6995b13a398479a7cd66e7fbe6834",
+        "format": "tar.gz",
+        "source-root": "libnsgif-e97bc7b86f19ace910a2c71025ad2d94a28a1d2e",
+        "root": "libnsgif-1.0.0"
+      }
+    },
+    "lua": {
+      "version": "5.5.1",
+      "build-script": "lua.sh",
+      "build-script-args": [
+        "$lua-version$"
+      ],
+      "library-output": "lib/lua64.la",
+      "header-outputs": ["include/lua/lua.h", "include/lua/lstate.h"],
+      "archive": {
+        "filename": "lua-5.5.1.tar.gz",
+        "url": "https://codeload.github.com/Mhatxotic/Lua/tar.gz/362b4228c8599e936215495f3492554911231521",
+        "sha256": "965dc9901622e3404f19e7dd04e5b8cfff7cc644fe3d481014d35e291a5b4524",
+        "format": "tar.gz",
+        "source-root": "Lua-362b4228c8599e936215495f3492554911231521",
+        "root": "lua-5.5.1"
+      }
+    },
+    "lzma": {
+      "version": "2606",
+      "build-script": "lzma.sh",
+      "build-script-args": [
+        "$lzma-version$"
+      ],
+      "library-output": "lib/lzma64.la",
+      "header-outputs": ["include/7z/7z.h", "include/7z/CpuArch.h"],
+      "archive": {
+        "filename": "lzma2606.7z",
+        "url": "https://github.com/ip7z/7zip/releases/download/26.06/lzma2606.7z",
+        "sha256": "1d9da340870b12712e9068be178a4436fbad785486b62aed6e2aa88ea1e3bb65",
+        "format": "7z",
+        "root": "lzma2606"
+      }
+    },
+    "ncurses": {
+      "version": "6.6",
+      "build-script": "ncurses.sh",
+      "build-script-args": [
+        "$ncurses-version$"
+      ],
+      "library-output": "lib/nc64.la",
+      "header-outputs": ["include/ncurses.h", "include/ncurses/ncurses_dll.h"],
+      "archive": {
+        "filename": "ncurses-6.6.tar.gz",
+        "url": "https://ftp.gnu.org/gnu/ncurses/ncurses-6.6.tar.gz",
+        "sha256": "355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11",
+        "format": "tar.gz",
+        "source-root": "ncurses-6.6",
+        "root": "ncurses-6.6"
+      }
+    },
+    "openal-soft": {
+      "version": "1.25.2",
+      "build-script": "openal.sh",
+      "build-script-args": [
+        "$openal-soft-version$"
+      ],
+      "patch": "patches/openal-soft-1.25.2.patch",
+      "library-output": "lib/al64.la",
+      "header-outputs": ["include/al/al.h", "include/al/alext.h"],
+      "archive": {
+        "filename": "openal-soft-1.25.2.tar.gz",
+        "url": "https://codeload.github.com/kcat/openal-soft/tar.gz/b2c48f7718ef3fcf67921a8b6534c4914e328970",
+        "sha256": "6a3e5f80058ecf994a6885d7db5013629a259c659ab40a6f17db8963ceb211b2",
+        "format": "tar.gz",
+        "source-root": "openal-soft-b2c48f7718ef3fcf67921a8b6534c4914e328970",
+        "root": "openal-soft-1.25.2"
+      }
+    },
+    "openssl": {
+      "version": "4.1.0",
+      "build-script": "openssl.sh",
+      "build-script-args": [
+        "$openssl-version$"
+      ],
+      "library-output": "lib/ssl64.la",
+      "header-outputs": ["include/openssl/ssl.h", "include/openssl/configuration.h"],
+      "archive": {
+        "filename": "openssl-4.1.0.tar.gz",
+        "url": "https://codeload.github.com/openssl/openssl/tar.gz/2f4e3a5fec05394068cfa7379890ab552483a8a6",
+        "sha256": "3eb00d3dbf2b3393dcf1cb82127a3d19ed911cec4e8315fe2ca20f3038b5ddde",
+        "format": "tar.gz",
+        "source-root": "openssl-2f4e3a5fec05394068cfa7379890ab552483a8a6",
+        "root": "openssl-4.1.0"
+      }
+    },
+    "sdl2": {
+      "version": "2.32.10",
+      "build-script": "sdl.sh",
+      "build-script-args": [
+        "$sdl2-version$"
+      ],
+      "library-output": "lib/sdl64.la",
+      "header-outputs": ["include/SDL2/SDL.h"],
+      "archive": {
+        "filename": "sdl2-2.32.10.tar.gz",
+        "url": "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz",
+        "sha256": "5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165",
+        "format": "tar.gz",
+        "source-root": "SDL2-2.32.10",
+        "root": "sdl2-2.32.10"
+      }
+    },
+    "simplewebp": {
+      "version": "git-679ee727",
+      "build-script": "simplewebp.sh",
+      "build-script-args": [
+        "$simplewebp-version$"
+      ],
+      "header-outputs": ["include/swp/simplewebp.h"],
+      "archive": {
+        "filename": "simplewebp-git-679ee727.tar.gz",
+        "url": "https://codeload.github.com/MikuAuahDark/simplewebp/tar.gz/679ee727829df44962e3de0cb8fbcc3db9dab962",
+        "sha256": "04608cca523dce910be6359cebc4602414eaa6a935ac88ef6a692bb08bbc380e",
+        "format": "tar.gz",
+        "source-root": "simplewebp-679ee727829df44962e3de0cb8fbcc3db9dab962",
+        "root": "simplewebp-git-679ee727"
+      }
+    },
+    "rapidjson": {
+      "version": "git-297637bc",
+      "build-script": "rapidjson.sh",
+      "build-script-args": [
+        "$rapidjson-version$"
+      ],
+      "header-outputs": [
+        "include/rapidjson/document.h",
+        "include/rapidjson/prettywriter.h",
+        "include/rapidjson/cursorstreamwrapper.h",
+        "include/rapidjson/error/en.h",
+        "include/rapidjson/internal/meta.h"
+      ],
+      "archive": {
+        "filename": "rapidjson-git-297637bc.tar.gz",
+        "url": "https://codeload.github.com/Tencent/rapidjson/tar.gz/297637bc0a0f00dc504dbc1a47ebdaa577f8ae19",
+        "sha256": "104f57d1512da80740a3eca7d7b2acee7f749d79dbf15328ad1869c5c962011b",
+        "format": "tar.gz",
+        "source-root": "rapidjson-297637bc0a0f00dc504dbc1a47ebdaa577f8ae19",
+        "root": "rapidjson-git-297637bc"
+      }
+    },
+    "sqlite": {
+      "version": "3.54.1",
+      "build-script": "sqlite.sh",
+      "build-script-args": [
+        "$sqlite-version$"
+      ],
+      "library-output": "lib/sqlite64.la",
+      "header-outputs": ["include/sql/sqlite3.h", "include/sql/sqlite3ext.h"],
+      "archive": {
+        "filename": "sqlite-amalgamation-3.54.1.zip",
+        "url": "https://www.sqlite.org/2026/sqlite-amalgamation-3540100.zip",
+        "sha256": null,
+        "format": "zip",
+        "source-root": "sqlite-amalgamation-3540100",
+        "root": "sqlite-amalgamation-3.54.1"
+      }
+    },
+    "zlib": {
+      "version": "1.4",
+      "build-script": "zlib.sh",
+      "build-script-args": [
+        "$zlib-version$"
+      ],
+      "library-output": "lib/zlib64.la",
+      "header-outputs": ["include/zlib/zlib.h", "include/zlib/zconf.h"],
+      "archive": {
+        "filename": "zlib-1.4.tar.gz",
+        "url": "https://github.com/madler/zlib/releases/download/v1.4/zlib-1.4.tar.gz",
+        "sha256": null,
+        "format": "tar.gz",
+        "source-root": "zlib-1.4",
+        "root": "zlib-1.4"
+      }
+    },
+    "libpng": {
+      "version": "1.6.59",
+      "build-script": "libpng.sh",
+      "build-script-args": [
+        "$libpng-version$",
+        "$zlib-version$"
+      ],
+      "library-output": "lib/png64.la",
+      "header-outputs": ["include/png/png.h", "include/png/pnglibconf.h"],
+      "archive": {
+        "filename": "libpng-1.6.59.tar.gz",
+        "url": "https://codeload.github.com/pnggroup/libpng/tar.gz/cd952f49f95bb27154ae77dbb103032d95f6e580",
+        "sha256": "ef1bccad2b2a58eb3c09e06ffe3b72b8604abda8b5011e4c4bb5391989040f26",
+        "format": "tar.gz",
+        "source-root": "libpng-cd952f49f95bb27154ae77dbb103032d95f6e580",
+        "root": "libpng-1.6.59"
+      },
+      "dependencies": [
+        "zlib"
+      ]
+    },
+    "freetype": {
+      "version": "2.15.0",
+      "build-script": "freetype.sh",
+      "build-script-args": [
+        "$freetype-version$",
+        "$zlib-version$",
+        "$libpng-version$"
+      ],
+      "library-output": "lib/ft64.la",
+      "header-outputs": ["include/ft/ft2build.h", "include/ft/freetype/freetype.h"],
+      "archive": {
+        "filename": "freetype-2.15.0.tar.gz",
+        "url": "https://codeload.github.com/freetype/freetype/tar.gz/37515cf56ba3349656049edbed89ffc6f6466f2d",
+        "sha256": "9efee8b0508e142f38d1c7e2e192d3e5041aa4bbf6c2ab1a901518211f76a914",
+        "format": "tar.gz",
+        "source-root": "freetype-37515cf56ba3349656049edbed89ffc6f6466f2d",
+        "root": "freetype-2.15.0"
+      },
+      "dependencies": [
+        "zlib",
+        "libpng"
+      ]
+    },
+    "libogg": {
+      "version": "1.3.6",
+      "build-script": "libogg.sh",
+      "build-script-args": [
+        "$libogg-version$",
+        "$libvorbis-version$"
+      ],
+      "library-output": "lib/ogg64.la",
+      "header-outputs": ["include/ogg/ogg.h", "include/ogg/os_types.h"],
+      "archive": {
+        "filename": "libogg-1.3.6.tar.gz",
+        "url": "https://codeload.github.com/xiph/ogg/tar.gz/be05b13e98b048f0b5a0f5fa8ce514d56db5f822",
+        "sha256": "b2ff5c003e5697507169f7d614d64dc4e8bf030c85ad081bec75c164566f8246",
+        "format": "tar.gz",
+        "source-root": "ogg-be05b13e98b048f0b5a0f5fa8ce514d56db5f822",
+        "root": "libogg-1.3.6"
+      }
+    },
+    "libvorbis": {
+      "version": "1.3.7",
+      "build-script": "libogg.sh",
+      "build-script-args": [
+        "$libogg-version$",
+        "$libvorbis-version$"
+      ],
+      "library-output": "lib/ogg64.la",
+      "header-outputs": ["include/ogg/codec.h", "include/ogg/vorbisfile.h", "include/ogg/vorbisenc.h"],
+      "archive": {
+        "filename": "libvorbis-1.3.7.tar.gz",
+        "url": "https://codeload.github.com/xiph/vorbis/tar.gz/0657aee69dec8508a0011f47f3b69d7538e9d262",
+        "sha256": "6ccc3fa4cfd3072f9a772025cc8fd712098d081c00171b09b6627ffced7faa88",
+        "format": "tar.gz",
+        "source-root": "vorbis-0657aee69dec8508a0011f47f3b69d7538e9d262",
+        "root": "libvorbis-1.3.7"
+      },
+      "dependencies": [
+        "libogg"
+      ]
+    },
+    "libtheora": {
+      "version": "1.2.0",
+      "build-script": "libtheora.sh",
+      "build-script-args": [
+        "$libtheora-version$",
+        "$libogg-version$",
+        "$libvorbis-version$"
+      ],
+      "library-output": "lib/theora64.la",
+      "header-outputs": ["include/theora/theora.h", "include/theora/theoradec.h"],
+      "archive": {
+        "filename": "libtheora-1.2.0.tar.gz",
+        "url": "https://codeload.github.com/xiph/theora/tar.gz/8e4808736e9c181b971306cc3f05df9e61354004",
+        "sha256": "83e1c8682d6496352286fa0967aeda5d78c422110312d111cf99fdf03ed73db0",
+        "format": "tar.gz",
+        "source-root": "theora-8e4808736e9c181b971306cc3f05df9e61354004",
+        "root": "libtheora-1.2.0"
+      },
+      "dependencies": [
+        "libogg",
+        "libvorbis"
+      ]
+    }
+  }
+}

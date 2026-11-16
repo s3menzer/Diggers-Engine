@@ -63,8 +63,10 @@ compile()
 
 # Clear the screen
 printf '\33c\e[3J'
-# Set the project directory incase we're not in it
-cd ~/Assets/Engine
+# Set the project directory in case we're not in it
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE"
 if [ $? -ne 0 ]; then exit 2; fi
 # Compile X86-64 version
 compile $TYPE x86_64-apple-macos10.15 32

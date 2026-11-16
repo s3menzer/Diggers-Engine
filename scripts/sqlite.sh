@@ -9,12 +9,17 @@ if [ -z $1 ]; then
   exit 1;
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 FILEPREFIX=sqlite-amalgamation
 FILE=$FILEPREFIX-$1
 ZIP=$ARCHIVE/$FILE.zip
+ISOSX=`uname`
 
 if [ ! -e $ZIP ]; then
   echo Error: $ZIP not found!
@@ -26,7 +31,7 @@ if [ ! -e $ZIP ]; then
   exit 2;
 fi
 
-7zz x -aos $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
   exit 3;
 fi
@@ -38,7 +43,7 @@ fi
 
 build()
 {
-  gcc -O3 -arch $1 -mtune=$2 -mmacosx-version-min=10.15 \
+  gcc -O3 -mtune=$2 \
     -DSQLITE_DEFAULT_AUTOVACUUM=2 -DSQLITE_TEMP_STORE=2 \
     -DSQLITE_ENABLE_NULL_TRIM -DSQLITE_OS_UNIX -DSQLITE_OMIT_LOAD_EXTENSION \
     -DSQLITE_OMIT_WAL -DSQLITE_OMIT_UTF16 -DSQLITE_OMIT_DEPRECATED \
@@ -59,10 +64,17 @@ build()
 }
 
 
-build arm64 apple-m1
 build x86_64 generic
+if [ $ISOSX = 'Darwin' ]; then
+  build arm64 apple-m1
+  lipo sqlite64*.a -create -output "${LIB}/sqlite64.ma"
+else
+  cp -f sqlite64*.a "${LIB}/sqlite64.la"
+fi
 
-lipo sqlite64*.a -create -output "${LIB}/sqlite64.ma"
 if [ ! $? -eq 0 ]; then
   exit 7;
 fi
+
+install_headers "$BASE/include/sql" \
+  "$BASE/$FILE/sqlite3.h" "$BASE/$FILE/sqlite3ext.h" || exit 8

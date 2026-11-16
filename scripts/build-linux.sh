@@ -9,7 +9,9 @@
 
 clear
 
-cd ~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE"
 
 # do -v to see command line or -### to print it and not compile
 

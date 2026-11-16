@@ -9,7 +9,11 @@ if [ -z $1 ]; then
   exit 1
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 INCLUDE=$BASE/include/jpeg
@@ -27,7 +31,7 @@ if [ ! -e $ZIP ]; then
   exit 2
 fi
 
-tar -xvzkf $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
     exit 3
 fi
@@ -56,13 +60,14 @@ build()
     exit 7
   fi
 
-  make turbojpeg-static
+  make -j"$BUILD_JOBS" turbojpeg-static
   if [ ! $? -eq 0 ]; then
     exit 8
   fi
 
-  cp -fv jconfig.h ${INCLUDE}/jconfig-$3.h
-  cp -fv ../src/*.h ${INCLUDE}/
+  mkdir -p "$INCLUDE" || exit 9
+  cp -fv jconfig.h "$INCLUDE/jconfig-$3.h" || exit 9
+  install_headers "$INCLUDE" jconfig.h jversion.h ../src/*.h || exit 9
 
   mv -fv libturbojpeg.a "../jpeg64-${1}-${2}.a"
   if [ ! $? -eq 0 ]; then
@@ -82,10 +87,9 @@ if [ $ISOSX = 'Darwin' ]; then
   lipo jpeg64-*.a -create -output "${LIB}/jpeg64.ma"
 else
   build x86_64 generic lnx64
-  ar rcs "${LIB}/jpeg64.la" jpeg64-*.a
+  cp -f jpeg64-x86_64-generic.a "${LIB}/jpeg64.la"
 fi
 
 if [ ! $? -eq 0 ]; then
   exit 11
 fi
-

@@ -9,7 +9,11 @@ if [ -z $3 ]; then
   exit 1
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 INCLUDE=$BASE/include/ft
@@ -19,9 +23,10 @@ FILEPREFIX3=libpng-
 FILE=$FILEPREFIX$1
 FILE2=$FILEPREFIX2$2
 FILE3=$FILEPREFIX3$3
-ZIP=$ARCHIVE/$FILE.tar.xz
-ZIP2=$ARCHIVE/$FILE2.tar.xz
-ZIP3=$ARCHIVE/$FILE3.tar.xz
+ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP2=$ARCHIVE/$FILE2.tar.gz
+ZIP3=$ARCHIVE/$FILE3.tar.gz
+ISOSX=`uname`
 
 if [ ! -e $ZIP ]; then
   echo Error 1: $ZIP not found!
@@ -53,13 +58,13 @@ if [ ! -e $ZIP3 ]; then
   exit 4
 fi
 
-tar -xvzkf $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then exit 5; fi
 
-tar -xvzkf $ZIP2
+extract_if_missing "$FILE2" "$ZIP2"
 if [ ! $? -eq 0 ]; then exit 6; fi
 
-tar -xvzkf $ZIP3
+extract_if_missing "$FILE3" "$ZIP3"
 if [ ! $? -eq 0 ]; then exit 7; fi
 
 cd $FILE
@@ -77,8 +82,6 @@ build()
 
   cmake -D"CMAKE_BUILD_TYPE=Release" \
         -D"CMAKE_POLICY_VERSION_MINIMUM=3.5" \
-        -D"CMAKE_OSX_ARCHITECTURES=${1}" \
-        -D"CMAKE_OSX_DEPLOYMENT_TARGET=${3}" \
         -D"CMAKE_C_FLAGS=-mtune=${2}" \
         -D"FT_DISABLE_HARFBUZZ=TRUE" \
         -D"FT_DISABLE_BZIP2=TRUE" \
@@ -93,7 +96,7 @@ build()
         ..
   if [ ! -e Makefile ]; then exit 10; fi
 
-  make
+  make -j"$BUILD_JOBS"
   if [ ! $? -eq 0 ]; then exit 11; fi
 
   mv -fv libfreetype.a "../ft64-${1}-${2}.a"
@@ -105,18 +108,17 @@ build()
 
 # Build for each platform
 build x86_64 generic 10.15
-build arm64 apple-m1 11.0
 
-# Join libraries together and put in place
-lipo ft64-*.a -create -output "${LIB}/ft64.ma"
+if [ $ISOSX = 'Darwin' ]; then
+  build arm64 apple-m1 11.0
+
+  # Join libraries together and put in place
+  lipo ft64-*.a -create -output "${LIB}/ft64.ma"
+else
+  cp -f ft64-x86_64-generic.a "${LIB}/ft64.la"
+fi
+
 if [ $? -ne 0 ]; then exit 14; fi
 
-# Patch include files to not make me have to use an extra '-I' argument
-for f in include/freetype/*.h include/freetype/config/*.h; do
-  fp=$f.patch
-  cat $f | sed 's/include\/freetype\///g' | \
-           sed 's/freetype\///g' > $fp
-  if [ $? -ne 0 ]; then exit 15; fi
-  mv -fv $fp $INCLUDE/"${f#include/freetype/}"
-  if [ $? -ne 0 ]; then exit 16; fi
-done
+install_headers "$INCLUDE" "$BASE/$FILE/include/ft2build.h" || exit 15
+install_headers "$INCLUDE/freetype" "$BASE/$FILE/include/freetype" || exit 16

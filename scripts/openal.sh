@@ -4,17 +4,34 @@
 # @ https://github.com/Mhatxotic/Engine
 # Copyright (c) Mhatxotic Design, 2006-present. All Rights Reserved.
 
-if [ -z $1 ]; then
-  echo Usage: $0 [version]
+if [ -z "${1:-}" ]; then
+  echo "Usage: $0 [version] [optional-patch-relative-to-.build-helpers]"
   exit 1
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 FILEPREFIX=openal-soft-
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.tar.bz2
+ZIP=$ARCHIVE/$FILE.tar.gz
+ISOSX=`uname`
+PATCH_FILE=
+if [ -n "${2:-}" ]; then
+  case "$2" in
+    /*) PATCH_FILE=$2 ;;
+    .build-helpers/*) PATCH_FILE=$BASE/$2 ;;
+    *) PATCH_FILE=$BASE/.build-helpers/$2 ;;
+  esac
+  if [ ! -f "$PATCH_FILE" ]; then
+    echo "Error: patch file '$PATCH_FILE' not found!" >&2
+    exit 2
+  fi
+fi
 
 if [ ! -e $ZIP ]; then
   echo Error: $ZIP not found!
@@ -26,15 +43,21 @@ if [ ! -e $ZIP ]; then
   exit 2
 fi
 
-tar -xvzf $ZIP
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
   exit 3
 fi
 
-FILE=${FILE:r}
-cd $FILE
+if [ -n "$PATCH_FILE" ]; then
+  apply_patch_if_needed "$PATCH_FILE" "$BASE/$FILE"
+  if [ ! $? -eq 0 ]; then
+    exit 4
+  fi
+fi
+
+cd "$FILE"
 if [ ! $? -eq 0 ]; then
-  exit 4
+  exit 5
 fi
 
 sed -i '' '410,412d' CMakeLists.txt
@@ -43,16 +66,26 @@ build()
 {
   rm -rfv CMakeFiles CMakeCache* 2>/dev/null
 
-
+  if [ $ISOSX = 'Darwin' ]; then
+    EXTRA = -D"CMAKE_OSX_ARCHITECTURES=${1}" \
+        -D"CMAKE_CXX_FLAGS=-mtune=${2} -stdlib=libc++" \
+        -D"CMAKE_OSX_DEPLOYMENT_TARGET=${3}"
+  fi
 
   cmake -D"LIBTYPE=STATIC" \
         -D"CMAKE_BUILD_TYPE=Release" \
-        -D"CMAKE_OSX_ARCHITECTURES=${1}" \
-        -D"CMAKE_CXX_FLAGS=-mtune=${2} -stdlib=libc++" \
-        -D"CMAKE_OSX_DEPLOYMENT_TARGET=${3}" \
+        $EXTRA \
+        -D"ALSOFT_BACKEND_PIPEWIRE=TRUE" \
+        -D"ALSOFT_REQUIRE_PIPEWIRE=TRUE" \
+        -D"ALSOFT_BACKEND_ALSA=TRUE" \
+        -D"ALSOFT_REQUIRE_ALSA=TRUE" \
+        -D"ALSOFT_BACKEND_PULSEAUDIO=TRUE" \
+        -D"ALSOFT_REQUIRE_PULSEAUDIO=TRUE" \
         -D"ALSOFT_BACKEND_PORTAUDIO=FALSE" \
+        -D"ALSOFT_REQUIRE_SDL2=TRUE" \
+        -D"ALSOFT_BACKEND_SDL2=TRUE" \
         -D"ALSOFT_BACKEND_WAVE=FALSE" \
-        -D"ALSOFT_DLOPEN=FALSE" \
+        -D"ALSOFT_DLOPEN=TRUE" \
         -D"ALSOFT_EMBED_HRTF_DATA=FALSE" \
         -D"ALSOFT_EXAMPLES=FALSE" \
         -D"ALSOFT_INSTALL_AMBDEC_PRESETS=FALSE" \
@@ -70,7 +103,7 @@ build()
     exit 6
   fi
 
-  make
+  make -j"$BUILD_JOBS"
   if [ ! $? -eq 0 ]; then
     exit 7
   fi
@@ -124,10 +157,18 @@ build()
   fi
 }
 
-build x86_64 generic 10.15
-build arm64 apple-m1 11.0
 
-lipo al64-*.a -create -output "${LIB}/al64.ma"
+build x86_64 generic 10.15
+
+if [ $ISOSX = 'Darwin' ]; then
+  build arm64 apple-m1 11.0
+  lipo al64-*.a -create -output "${LIB}/al64.ma"
+else
+  cp -f al64-x86_64-generic.a "${LIB}/al64.la"
+fi
+
 if [ ! $? -eq 0 ]; then
   exit 17
 fi
+
+install_headers "$BASE/include/al" "$BASE/$FILE/include/AL" || exit 18

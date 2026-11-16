@@ -9,7 +9,11 @@ if [ -z $1 ]; then
   exit 1;
 fi
 
-BASE=~/Assets/Engine
+SCRIPT_DIR=$(readlink -f "$0")
+BASE=$(dirname $(dirname "$SCRIPT_DIR"))
+cd "$BASE" || exit 1
+
+. "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
 LIB=$BASE/lib
 FILEPREFIX=lzma
@@ -26,7 +30,7 @@ if [ ! -e $ZIP ]; then
   exit 2;
 fi
 
-7zz x -aos $ZIP -o$FILE
+extract_if_missing "$FILE" "$ZIP"
 if [ ! $? -eq 0 ]; then
   exit 3;
 fi
@@ -107,9 +111,11 @@ if [ $ISOSX = 'Darwin' ]; then
 else
   EXTRA="-D"
   build x86_64 generic 0
-  ar rcs "${LIB}/lzma64.la" lzma64-*.a
+  cp -f $ARCH "${LIB}/lzma64.la"
 fi
 
 if [ ! $? -eq 0 ]; then
   exit 12;
 fi
+
+install_headers "$BASE/include/7z" "$BASE/$FILE/C"/*.h || exit 13
