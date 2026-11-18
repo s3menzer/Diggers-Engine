@@ -16,12 +16,12 @@ cd "$BASE" || exit 1
 . "$BASE/scripts/common.sh" || exit 1
 
 ARCHIVE=$BASE/archive
-LIB=$BASE/lib
+LIB=$LIB_DIR
 FILEPREFIX=glfw-
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.zip
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   echo Error: $ZIP not found!
   LS=`echo $ARCHIVE/$FILEPREFIX* 2>/dev/null`
   if [ ! -z "${LS}" ]; then
@@ -43,19 +43,21 @@ fi
 
 build()
 {
-  rm -rfv "build-${1}" 2>/dev/null
-  mkdir -p "build-${1}" 2>/dev/null
-  cd "build-${1}"
+  BUILDDIR="build-${TARGET_TAG}-${1}"
+  rm -rfv "$BUILDDIR" 2>/dev/null
+  mkdir -p "$BUILDDIR" 2>/dev/null
+  cd "$BUILDDIR"
   if [ ! $? -eq 0 ]; then
     exit 6
   fi
 
-  cmake -D"CMAKE_BUILD_TYPE=Release" \
+  cmake_configure -D"CMAKE_BUILD_TYPE=Release" \
         -D"CMAKE_C_FLAGS=-mtune=${2}" \
         $EXTRA \
         -D"GLFW_BUILD_DOCS=OFF" \
         -D"GLFW_BUILD_EXAMPLES=OFF" \
         -D"GLFW_BUILD_TESTS=OFF" \
+        -D"BUILD_SHARED_LIBS=OFF" \
         $3 \
         ..
   if [ ! $? -eq 0 ]; then
@@ -79,7 +81,11 @@ build()
 }
 
 ISOSX=`uname`
-if [ $ISOSX = 'Darwin' ]; then
+if [ "$BUILD_PLATFORM" = windows ]; then
+  EXTRA="-DGLFW_BUILD_X11=OFF -DGLFW_BUILD_WAYLAND=OFF -DGLFW_BUILD_WIN32=ON"
+  build x86_64 generic
+  publish_library glfw64-x86_64-generic.a glfw64.la libglfw3.a
+elif [ $ISOSX = 'Darwin' ]; then
   EXTRA="-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DCMAKE_OSX_ARCHITECTURES=x86_64"
   build x86_64 generic
   EXTRA="-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0"
@@ -94,4 +100,4 @@ if [ ! $? -eq 0 ]; then
   exit 11
 fi
 
-install_headers "$BASE/include/glfw" "$BASE/$FILE/include/GLFW" || exit 12
+install_headers "$INCLUDE_ROOT/glfw" "$BASE/$FILE/include/GLFW" || exit 12

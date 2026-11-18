@@ -302,9 +302,11 @@ extern "C" { int z_verbose = 0, z_error = 0; } // Z-Lib API requires this
 /* -- STL Headers ---------------------------------------------------------- */
 # include <execution>                  // For std::execution::* classes
 /* -- VC Headers ----------------------------------------------------------- */
+# include <sys/stat.h>                 // Stat structures and descriptor APIs
 # include <direct.h>                   // Directory header
 # include <intrin.h>                   // Required by jpeg stuff
 # include <stdio.h>                    // Standard IO stuff
+# include <share.h>                    // File sharing modes for _wfsopen
 # include <io.h>                       // Io header
 # include <process.h>                  // Process header
 # include <sys/timeb.h>                // Time block functions

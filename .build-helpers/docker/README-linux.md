@@ -13,3 +13,11 @@
     ./.build-helpers/scripts/docker-shell-linux.sh
 ```
 
+## Full Linux build
+```sh
+./.build-helpers/scripts/docker-build-linux.sh
+```
+
+The build entry point creates the image if needed, then downloads/builds the
+Linux dependencies, builds the helper, Diggers assets and executable, and
+packages the game. GitHub Actions uses the same script.

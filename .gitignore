@@ -32,6 +32,7 @@
 !macos/*.md
 !scripts/
 !scripts/*.bat
+!scripts/mingw64-toolchain.cmake
 !scripts/*.md
 !scripts/*.sh
 !src/

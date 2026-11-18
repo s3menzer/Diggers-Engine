@@ -17,7 +17,7 @@ cd "$BASE" || exit 1
 ARCHIVE=$BASE/archive
 FILEPREFIX=rapidjson-
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 PATCH_FILE=
 if [ -n "${2:-}" ]; then
   case "$2" in
@@ -56,4 +56,4 @@ fi
 cd "$FILE" || exit 5
 
 # RapidJSON is header-only.
-install_headers "$BASE/include/rapidjson" include/rapidjson
+install_headers "$INCLUDE_ROOT/rapidjson" include/rapidjson

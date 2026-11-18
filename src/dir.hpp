@@ -7,6 +7,8 @@
 ** ========================================================================= */
 #pragma once                           // Only one incursion allowed
 /* ------------------------------------------------------------------------- */
+using std::cout;                       // Using this to print text
+/* ------------------------------------------------------------------------- */
 namespace IDir {                       // Start of private module namespace
 /* -- Dependencies --------------------------------------------------------- */
 using namespace ICommon::P;            using namespace ICVarDef::P;
@@ -574,19 +576,37 @@ static StdString DirGetCWD()
 #endif
 }
 /* == Set current directory ================================================ */
-static bool DirSetCWD(const StdStringView &ssvDirectory)
+static bool DirSetCWD(const StdStringView &ssvDirectory,
+  const bool bShowOutput=false)
 { // Ignore if empty
-  if(ssvDirectory.empty()) return false;
+  if(ssvDirectory.empty())
+  { // Still report the absolute working directory when requested
+    if(bShowOutput)
+      cout << "[DirSetCWD] Current absolute working directory: " << DirGetCWD()
+           << " (empty directory request)" << StdIOSEndLine;
+    return false;
+  }
   // Process is different on win32 with having drive letters
 #if defined(WINDOWS)
   // Set drive first if specified
   if(ssvDirectory.size() >= 3 && ssvDirectory[1] == ':' &&
      (ssvDirectory[2] == '\\' || ssvDirectory[2] != '/') &&
      _chdrive((StdToUpper(ssvDirectory.front()) - 'A') + 1) < 0)
+  { // Report the current directory even when switching drives fails
+    if(bShowOutput)
+      cout << "[DirSetCWD] Current absolute working directory: " << DirGetCWD()
+           << " (failed to switch drive for '" << ssvDirectory << "')"
+           << StdIOSEndLine;
     return false;
+  }
 #endif
-  // Set current directory and return false if there is a problem
-  return !StdChDir(ssvDirectory);
+  // Set current directory and report the resulting absolute path
+  const bool bSuccess = !StdChDir(ssvDirectory);
+  if(bShowOutput)
+    cout << "[DirSetCWD] Current absolute working directory: " << DirGetCWD()
+         << " (requested '" << ssvDirectory << "'; "
+         << (bSuccess ? "success" : "failed") << ')' << StdIOSEndLine;
+  return bSuccess;
 }
 /* -- Make a directory ----------------------------------------------------- */
 static bool DirMkDir(const StdStringView &strDir) { return !StdMkDir(strDir); }

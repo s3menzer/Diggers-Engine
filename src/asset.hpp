@@ -107,6 +107,10 @@ static FileMap AssetExtract(const StdStringView &ssvFile)
           "File", ssvFile, "Directory", DirGetCWD());
       } // Load the file from disk if it exists try to load it
       if(DirLocalFileExists(ssvFile)) return AssetLoadFromDisk(ssvFile);
+      cLog->LogWarningExSafe(
+        "Resource lookup failed for '$' (order=$; cwd='$'; archives=$: '$').",
+        ssvFile, static_cast<unsigned>(cAssets->fsotOverride), DirGetCWD(),
+        cArchives->CollectorCount(), ArchiveGetNames());
       XCL("Failed to load resource in archives or on disk!",
         "File",     ssvFile,          "Directory", DirGetCWD(),
         "Archives", ArchiveGetNames(), "Count", cArchives->CollectorCount());

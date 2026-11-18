@@ -15,12 +15,12 @@ cd "$BASE" || exit 1
 
 . "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
-LIB=$BASE/lib
+LIB=$LIB_DIR
 FILEPREFIX=lzma
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.7z
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   echo Error: $ZIP not found!
   LS=`ls $ARCHIVE/$FILEPREFIX* 2>/dev/null`
   if [ ! -z "$LS" ]; then
@@ -79,7 +79,7 @@ build()
 
   ARCH="lzma64-${TYPE}-${SUBTYPE}.a"
 
-  gcc $EXTRA$TYPE -mtune=$SUBTYPE -O3 -Wall -Wextra \
+  "$CC" $EXTRA$TYPE -mtune=$SUBTYPE -O3 -Wall -Wextra \
       -DUSE_ASM $ASMOPT -D_REENTRANT\
       -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DNDEBUG \
       -Wno-implicit-function-declaration \
@@ -91,7 +91,7 @@ build()
 
   rm -rf $ARCH 2>/dev/null
 
-  ar rcs $ARCH *.o
+  "$AR" rcs "$ARCH" *.o
   if [ ! $? -eq 0 ]; then
     exit 10;
   fi
@@ -103,7 +103,11 @@ build()
 }
 
 ISOSX=`uname`
-if [ $ISOSX = 'Darwin' ]; then
+if [ "$BUILD_PLATFORM" = windows ]; then
+  EXTRA="-D"
+  build x86_64 generic 0
+  publish_library "$ARCH" lzma64.la liblzma.a
+elif [ $ISOSX = 'Darwin' ]; then
   EXTRA="-mmacosx-version-min=10.15 -arch "
   build x86_64 generic 0
   build arm64 apple-m1 1 ../Asm/arm64/*.S
@@ -118,4 +122,4 @@ if [ ! $? -eq 0 ]; then
   exit 12;
 fi
 
-install_headers "$BASE/include/7z" "$BASE/$FILE/C"/*.h || exit 13
+install_headers "$INCLUDE_ROOT/7z" "$BASE/$FILE/C"/*.h || exit 13

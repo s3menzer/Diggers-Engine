@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch pinned Linux third-party archives and build missing libraries."""
+"""Fetch pinned third-party archives and build missing target libraries."""
 
 from __future__ import annotations
 
@@ -383,9 +383,24 @@ def build_invocations(entries: list[tuple[str, str, list[str], dict]]) -> list[d
     return invocations
 
 
+def output_paths_for_target(invocation: dict) -> tuple[list[Path], list[Path]]:
+    """Map manifest's native output paths to the isolated MinGW staging tree."""
+    build_target = os.environ.get("BUILD_TARGET", "auto").lower()
+    is_windows = (build_target in {"windows", "win64", "mingw64"}
+                  or (build_target == "auto" and bool(os.environ.get("MINGW_TARGET"))))
+
+    def target_path(value: str) -> Path:
+        path = Path(value)
+        if is_windows and path.parts[0] in {"lib", "include"}:
+            return Path(path.parts[0]) / "win64" / Path(*path.parts[1:])
+        return path
+
+    return ([target_path(path) for path in invocation["outputs"]],
+            [target_path(path) for path in invocation["headers"]])
+
+
 def output_is_built(invocation: dict) -> bool:
-    outputs = invocation["outputs"]
-    headers = invocation["headers"]
+    outputs, headers = output_paths_for_target(invocation)
     return (bool(outputs or headers)
             and all((PROJECT_ROOT / output).is_file() for output in outputs)
             and all((PROJECT_ROOT / header).is_file() for header in headers))
@@ -397,7 +412,8 @@ def run_build_scripts(entries: list[tuple[str, str, list[str], dict]]) -> None:
         if not script_path.is_file():
             raise FetchError(f"Build script not found: {script_path}")
         if output_is_built(invocation):
-            outputs = ", ".join(invocation["outputs"] + invocation["headers"])
+            target_outputs, target_headers = output_paths_for_target(invocation)
+            outputs = ", ".join(str(path) for path in target_outputs + target_headers)
             print(f"[ready] {', '.join(invocation['libraries'])}: outputs already exist ({outputs}); skipping")
             continue
 
@@ -412,7 +428,8 @@ def run_build_scripts(entries: list[tuple[str, str, list[str], dict]]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Download pinned Linux archives, build libraries, and install headers."
+        description=("Download pinned dependency archives, build libraries, and install headers. "
+                     "Set BUILD_TARGET=windows inside the MinGW builder to cross-compile x86-64 Windows libraries.")
     )
     parser.add_argument("--dry-run", action="store_true", help="list planned downloads and builds without side effects")
     parser.add_argument("--download-only", action="store_true",

@@ -25,11 +25,13 @@ static bool StdIsCStringNotValid(const CharType*const ctStr)
   { return !StdIsCStringValid<CharType>(ctStr); }
 /* ------------------------------------------------------------------------- */
 #if defined(WINDOWS)                   // Using Windows?
+#ifndef R_OK
 /* -- These don't exist on Windows so we'll make it easier ----------------- */
 constexpr static const int R_OK = 4,   // File is readable (StdAccess)
                            W_OK = 2,   // File is writable (StdAccess)
                            X_OK = 1,   // File is executable (StdAccess)
                            F_OK = 0;   // File exists (StdAccess)
+#endif
 /* -- Typedefs for structure names that are different on Windows ----------- */
 using StdFStatStruct = struct ::__stat64; // Different on Windows
 using StdTMStruct    = struct ::tm;       // Different on Windows

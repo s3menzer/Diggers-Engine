@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "as_of": "2026-11-18",
+  "as_of": "2026-11-19",
   "platform": "linux",
   "archive_directory": "archive",
   "libs": {
@@ -86,6 +86,19 @@
         "sha256": "1d9da340870b12712e9068be178a4436fbad785486b62aed6e2aa88ea1e3bb65",
         "format": "7z",
         "root": "lzma2606"
+      }
+    },
+    "7zip": {
+      "version": "26.06",
+      "build-script": "7z.sh",
+      "build-script-args": [
+        "$7zip-version$"
+      ],
+      "archive": {
+        "filename": "7z2606-extra.7z",
+        "url": "https://github.com/ip7z/7zip/releases/download/26.06/7z2606-extra.7z",
+        "sha256": null,
+        "format": "7z"
       }
     },
     "ncurses": {

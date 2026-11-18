@@ -15,13 +15,13 @@ cd "$BASE" || exit 1
 
 . "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
-LIB=$BASE/lib
-INCLUDE=$BASE/include/jpeg
+LIB=$LIB_DIR
+INCLUDE=$INCLUDE_ROOT/jpeg
 FILEPREFIX=libjpeg-turbo-
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   echo Error: $ZIP not found!
   LS=`echo $ARCHIVE/$FILEPREFIX* 2>/dev/null`
   if [ ! -z "${LS}" ]; then
@@ -43,18 +43,30 @@ fi
 
 build()
 {
-  rm -rfv "build-${1}" 2>/dev/null
-  mkdir "build-${1}" 2>/dev/null
-  cd "build-${1}"
+  OSX_ARGS=
+  SIMD_ARGS=
+  if [ "$(uname -s)" = 'Darwin' ]; then
+    OSX_ARGS="-D CMAKE_OSX_ARCHITECTURES=${1} -D CMAKE_OSX_DEPLOYMENT_TARGET=10.15"
+  fi
+  if [ "$BUILD_PLATFORM" = windows ]; then
+    SIMD_ARGS=-DWITH_SIMD=OFF
+  fi
+  BUILDDIR="build-${TARGET_TAG}-${1}"
+  rm -rfv "$BUILDDIR" 2>/dev/null
+  mkdir "$BUILDDIR" 2>/dev/null
+  cd "$BUILDDIR"
   if [ ! $? -eq 0 ]; then
     exit 5
   fi
 
-  cmake -D"CMAKE_BUILD_TYPE=Release" \
-        -D"CMAKE_OSX_ARCHITECTURES=${1}" \
+  cmake_configure -D"CMAKE_BUILD_TYPE=Release" \
         -D"CMAKE_C_FLAGS=-mtune=${2}" \
-        -D"CMAKE_OSX_DEPLOYMENT_TARGET=10.15" \
-        $2 \
+        -DENABLE_SHARED=OFF \
+        -DWITH_TURBOJPEG=ON \
+        -DWITH_JAVA=OFF \
+        -DWITH_TESTS=OFF \
+        $SIMD_ARGS \
+        $OSX_ARGS \
         ..
   if [ ! $? -eq 0 ]; then
     exit 7
@@ -68,6 +80,10 @@ build()
   mkdir -p "$INCLUDE" || exit 9
   cp -fv jconfig.h "$INCLUDE/jconfig-$3.h" || exit 9
   install_headers "$INCLUDE" jconfig.h jversion.h ../src/*.h || exit 9
+  if [ "$BUILD_PLATFORM" = windows ]; then
+    install_headers "$MINGW_PREFIX/include/jpeg" \
+      "$INCLUDE/jconfig-$3.h" || exit 9
+  fi
 
   mv -fv libturbojpeg.a "../jpeg64-${1}-${2}.a"
   if [ ! $? -eq 0 ]; then
@@ -81,7 +97,10 @@ build()
 }
 
 ISOSX=`uname`
-if [ $ISOSX = 'Darwin' ]; then
+if [ "$BUILD_PLATFORM" = windows ]; then
+  build x86_64 generic win64
+  publish_library jpeg64-x86_64-generic.a jpeg64.la libjpeg.a libturbojpeg.a
+elif [ $ISOSX = 'Darwin' ]; then
   build arm64 apple-m1 osx64a
   build x86_64 generic osx64i
   lipo jpeg64-*.a -create -output "${LIB}/jpeg64.ma"

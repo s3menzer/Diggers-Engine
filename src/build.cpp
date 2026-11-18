@@ -215,10 +215,10 @@ envWindowsMSVC =                       // Microsoft Visual C++ environment
   /* LDB        */ "-subsystem:console,$.$$$",
   /* LD4        */ "-machine:x86 -largeaddressaware",
   /* LD8        */ "-machine:x64",
-  /* LDL        */ "advapi32.lib avrt.lib comctl32.lib crypt32.lib "
+  /* LDL        */ "advapi32.lib avrt.lib bcrypt.lib comctl32.lib crypt32.lib "
                    "dbghelp.lib dsound.lib gdi32.lib imagehlp.lib "
                    "kernel32.lib ole32.lib psapi.lib shell32.lib user32.lib "
-                   "version.lib winmm.lib ws2_32.lib",
+                   "uuid.lib version.lib winmm.lib ws2_32.lib",
   /* LDMAP      */ "-map:$",
   /* LIB        */ ".lib",
   /* OBJ        */ ".obj",
@@ -234,6 +234,80 @@ envWindowsMSVC =                       // Microsoft Visual C++ environment
   /* ARM        */ "-nologo -ltcg",
   /* ARO        */ "-out:\"$/$$\"",
   /* ARLIB      */ envWindowsMSVC.cpLIB,
+},/* ----------------------------------------------------------------------- */
+envWindowsMinGW =                      // MinGW-w64 on Windows (including Wine)
+{ /* ----------------------------------------------------------------------- */
+  /* PERL       */ envWindowsMSVC.cpPerl,
+  /* CMAKE      */ envWindowsMSVC.cpCMake,
+  /* CPPCHECK   */ envWindowsMSVC.cpCppCheck,
+  /* CPPCHKP    */ "-D_WIN32 -D_WIN64 -D__MINGW32__",
+  /* CPPCHKP32  */ "-DX86 -D_M_IX86 -D_M_X86 -D_X86_ -D__i386__ "
+                   "--platform=win32W",
+  /* CPPCHKP64  */ "-DX64 -D__x86_64__ -D_WIN64 --platform=win64",
+  /* DEBUGGER   */ envWindowsMSVC.cpDBG,
+  /* 7Z         */ envWindowsMSVC.cp7z,
+  /* AC4        */ "",
+  /* AC8        */ "",
+  /* ACM        */ "",
+  /* ACA        */ "",
+  /* ACB        */ "",
+  /* CCX        */ "Z:/opt/winlibs/mingw64/bin/g++.exe",
+  /* CCM        */ "-c -mthreads -fmax-errors=1 -DAL_LIBTYPE_STATIC",
+  /* CCMX       */ "-Iinclude/win64 -Iinclude/win64/ft -I$ -I$/ft",
+  /* CCLIB      */ "-DUNICODE -D_UNICODE",
+  /* CCINCDBG   */ "",
+  /* CCASM      */ "-S",
+  /* CCANAL     */ "-fanalyzer",
+  /* CCAA       */ "-DALPHA -g -O0 -fno-rtti",
+  /* CCAB       */ "-DBETA -g -O2 -fno-rtti",
+  /* CCAR       */ "-DRELEASE -O3 -fno-rtti -ffunction-sections "
+                   "-fdata-sections",
+  /* CCPP       */ "-E -P",
+  /* CC4        */ "-m32",
+  /* CC8        */ "-m64",
+  /* CPPSTD     */ "-std=$",
+  /* CCOBJ      */ "-o ",
+  /* CCRES      */ "-o ",
+  /* RCX        */ "Z:/opt/winlibs/mingw64/bin/windres.exe",
+  /* RCM        */ "-O coff -I$ -Ibuild-windows/rc/include "
+                   "-Ibuild-windows/rc/assets "
+                   "--preprocessor-arg=-Wno-trigraphs",
+  /* RCAA       */ "-DALPHA",
+  /* RCAB       */ "-DBETA",
+  /* RCAR       */ "-DRELEASE",
+  /* RC4        */ "-DX86",
+  /* RC8        */ "-DX64",
+  /* LDX4       */ "Z:/opt/winlibs/mingw64/bin/g++.exe",
+  /* LDX8       */ "Z:/opt/winlibs/mingw64/bin/g++.exe",
+  /* LDM        */ "-static -static-libgcc -static-libstdc++",
+  /* LDAA       */ "",
+  /* LDAB       */ "-Wl,--gc-sections",
+  /* LDAR       */ "-Wl,--gc-sections",
+  /* LDE        */ "-mwindows -municode",
+  /* LDB        */ "-mconsole",
+  /* LD4        */ "-m32",
+  /* LD8        */ "-m64",
+  // Link both runtimes statically; libstdc++ must precede its thread provider.
+  /* LDL        */ "-Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic "
+                   "-ladvapi32 -lavrt -lbcrypt -lcomctl32 -lcrypt32 -ldbghelp "
+                   "-ldsound -lgdi32 -limagehlp -lkernel32 -lole32 -lpsapi "
+                   "-lshell32 -luser32 -luuid -lversion -lwinmm -lws2_32 "
+                   "-static",
+  /* LDMAP      */ "-Wl,-Map,$",
+  /* LIB        */ ".la",
+  /* OBJ        */ ".o",
+  /* ASM        */ ".s",
+  /* PDB        */ ".map",
+  /* LDEXE      */ "-o $",
+  /* MAP        */ ".map",
+  /* EXE        */ ".exe",
+  /* DBGSUF     */ "",
+  /* AR         */ "Z:/opt/winlibs/mingw64/bin/ar.exe",
+  /* AR4        */ "",
+  /* AR8        */ "",
+  /* ARM        */ "rcs",
+  /* ARO        */ "\"$/$$\"",
+  /* ARLIB      */ ".la",
 },/* ----------------------------------------------------------------------- */
 envWindowsLLVMcompat =                 // LLVM (MSVC compat) on Windows
 { /* ----------------------------------------------------------------------- */
@@ -595,10 +669,11 @@ envLinuxGCC =                          // GCC on Linux
 #define PF_VERSION  0x0000000400000000ULL // Show version information
 #define PF_BLICS    0x0000000800000000ULL // Build licenses
 #define PF_PREPROC  0x0000001000000000ULL // Preprocess
+#define PF_ENVWMINGW 0x0000002000000000ULL // Use Windows MinGW environment
 /* -- All compiling related flags ------------------------------------------ */
 #define PF_COMPILE (PF_X86|PF_X64|PF_ANALYSE|PF_BETA|PF_ALPHA|PF_FINAL|\
                     PF_CCINCS|PF_MORE|PF_ASM|PF_ENVWMSVC|PF_ENVWLLVM|\
-                    PF_ENVXCODE|PF_ENVGCC|PF_PREPROC)
+                    PF_ENVXCODE|PF_ENVGCC|PF_ENVWMINGW|PF_PREPROC)
 /* -- All other command flags ---------------------------------------------- */
 #define PF_OTHERS (PF_DOC|PF_DISTRO|\
                    PF_CAGEN|PF_ASSETS|PF_FASSETS|PF_NPROJ|PF_CHPROJ|\
@@ -1941,7 +2016,7 @@ static void MakeDirectory(const StdString &strDir)
       XCL("Failed to make directory!", "Directory", strDir); }
 /* ------------------------------------------------------------------------- */
 static void SetDirectoryNR(const StdString &strDir = strBaseDir)
-  { if(!DirSetCWD(strDir))
+  { if(!DirSetCWD(strDir, (ullFlags & PF_SYSOUT) != 0))
       XCL("Failed to set new directory!", "Directory", strDir); }
 /* ------------------------------------------------------------------------- */
 static void SetDirectory(const StdString &strDir = strBaseDir)
@@ -2024,10 +2099,11 @@ static int SpecialExecute(const StdString strCmd, const size_t stML,
   return iR;
 }
 /* ------------------------------------------------------------------------- */
-static int SpecialExecute2(const StdString &strCmd, const bool bOverride=true)
+static int SpecialExecute2(const StdString &strCmd, const bool bOverride=true,
+  const bool bShowOutput=false)
 { // Execute command line and throw error if it failed
   if(const int iR = SpecialExecute(strCmd,
-    ullFlags & PF_SYSOUT ? StdNPos : 0, bOverride))
+    (bShowOutput || (ullFlags & PF_SYSOUT)) ? StdNPos : 0, bOverride))
   { // Carriage return
     cout << '\n';
     // Throw error
@@ -2039,6 +2115,7 @@ static int SpecialExecute2(const StdString &strCmd, const bool bOverride=true)
 /* ------------------------------------------------------------------------- */
 #define System(...) SpecialExecute2(__VA_ARGS__, true)
 #define SystemF(...) SpecialExecute2(StrFormat(__VA_ARGS__), true)
+#define SystemFOut(...) SpecialExecute2(StrFormat(__VA_ARGS__), true, true)
 #define SystemNF(...) SpecialExecute2(StrFormat(__VA_ARGS__), false)
 /* ------------------------------------------------------------------------- */
 static void RenameFileSafe(const StdString &strSrc, const StdString &strDst)
@@ -2062,6 +2139,37 @@ static void RenameFileSafe(const StdString &strSrc, const StdString &strDst)
   cout << " OW OK!" << StdIOSEndLine;
 }
 /* ------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+static StdString GetUtilExecutable(const StdStringView &ssvUtil)
+{ // Resolve any Engine utility path independently of the current directory
+  if(ssvUtil.empty()) XCL("Empty utility executable path!");
+#if defined(WINDOWS)
+  const bool bAbsolute = (ssvUtil.size() >= 3 && ssvUtil[1] == ':' &&
+    (ssvUtil[2] == '/' || ssvUtil[2] == '\\')) ||
+    ssvUtil.front() == '/' || ssvUtil.front() == '\\';
+  const StdString strPath{ bAbsolute ? StdString{ ssvUtil } :
+    StrAppend(cSystem->ENGLoc(), "../", ssvUtil) };
+  StdString strExe{ PathSplit{ strPath, true }.strFull };
+  for(char &cChar : strExe)
+    if(cChar == '/') cChar = '\\';
+  const StdString strCWD{ DirGetCWD() };
+  const bool bExists = DirLocalFileExists(strExe);
+  if(ullFlags & PF_SYSOUT)
+    cout << "[Utility] Requested: " << ssvUtil << StdIOSEndLine
+         << "[Utility] Current absolute working directory: " << strCWD
+         << StdIOSEndLine
+         << "[Utility] Executable: " << strExe << StdIOSEndLine
+         << "[Utility] Exists: " << (bExists ? "yes" : "no")
+         << StdIOSEndLine;
+  if(!bExists)
+    XCL("Utility executable was not found!",
+        "Utility", ssvUtil, "File", strExe, "Directory", strCWD);
+  return strExe;
+#else
+  return StrAppend(ssvUtil);
+#endif
+}
+/* ------------------------------------------------------------------------- */
 static int CertFunc(const StdString strOut)
 { // Files that we care about
   const StdString
@@ -2075,7 +2183,7 @@ static int CertFunc(const StdString strOut)
     if(strPass.empty()) XCL("Empty password!", "File", strCodePass);
     // Move to temp file because osslsigncode wont work
     const StdString strOutUnsigned{ StrAppend(strOut, ".unsigned") };
-    SystemF("mv -fv \"$\" \"$\"", strOut, strOutUnsigned);
+    RenameFileSafe(strOut, strOutUnsigned);
     // Do sign
     SystemF("osslsigncode sign "
             "-pkcs12 \"$\" "
@@ -2239,6 +2347,44 @@ static void PatchChecksum(const StdString &strOut)
     XCL("Could not write executable file!",
         "File", strOut, "Size", mB.MemSize());
 }
+/* ------------------------------------------------------------------------- */
+static void StripExecutableOverlay(const StdString &strExe)
+{ // Resource archives are read from the end of the PE sections, so discard
+  // any unrelated bytes trailing the executable before appending the .adb.
+  const size_t stPEEnd{ cSystem->GetExeSize(strExe) };
+  if(!stPEEnd)
+    XCL("Could not determine the PE image end!", "File", strExe);
+  FStream fsExe{ strExe, FM_R_B };
+  if(!fsExe)
+    XCL("Could not open executable to inspect its overlay!", "File", strExe);
+  const int64_t llFileSize{ fsExe.FStreamSize() };
+  if(llFileSize < 0 || static_cast<uint64_t>(llFileSize) < stPEEnd)
+    XCL("PE image end exceeds executable file size!", "File", strExe,
+        "ImageEnd", stPEEnd, "FileSize", llFileSize);
+  const int64_t llOverlaySize = llFileSize - static_cast<int64_t>(stPEEnd);
+  if(ullFlags & PF_SYSOUT)
+    cout << "[Package] PE image end=" << stPEEnd << "; source file size="
+         << llFileSize << "; removing " << llOverlaySize
+         << " non-PE overlay bytes from '" << strExe << "'."
+         << StdIOSEndLine;
+  if(!llOverlaySize) { fsExe.FStreamClose(); return; }
+  // Preserve the PE sections, close the read handle, and rewrite without the
+  // trailing overlay so the application archive begins at the detected end.
+  Memory mImage{ stPEEnd };
+  const size_t stRead = fsExe.FStreamReadSafe(mImage.MemPtr(), stPEEnd);
+  fsExe.FStreamClose();
+  if(stRead != stPEEnd)
+    XCL("Could not read the complete PE image!", "File", strExe,
+        "Expected", stPEEnd, "Actual", stRead);
+  FStream fsTrimmed{ strExe, FM_W_B };
+  if(!fsTrimmed)
+    XCL("Could not truncate executable overlay!", "File", strExe);
+  const size_t stWritten = fsTrimmed.FStreamWriteBlock(mImage);
+  fsTrimmed.FStreamClose();
+  if(stWritten != stPEEnd)
+    XCL("Could not write the complete PE image!", "File", strExe,
+        "Expected", stPEEnd, "Actual", stWritten);
+}
 #endif
 /* ------------------------------------------------------------------------- */
 #if defined(WINDOWS) || defined(LINUX)
@@ -2253,27 +2399,95 @@ static void BuildExecutable(const StdString &strTmp, const StdString &strOS,
     strTmp, strName, envActive.cpEXE) };
   const StdString strOutTmp{ StrAppend(strOut, ".tmp") };
   // Copy binary, make it executable (upx needs this) and compress it
+#if defined(WINDOWS)
+  // xcopy requires Windows path separators and prompts to distinguish a file
+  // target from a directory target. Convert paths and answer that prompt.
+  StdString strInWin{ strIn }, strOutTmpWin{ strOutTmp };
+  for(char &cChar : strInWin)
+    if(cChar == '/') cChar = '\\';
+  for(char &cChar : strOutTmpWin)
+    if(cChar == '/') cChar = '\\';
+  SystemF("echo F | xcopy /K /Y /Q \"$\" \"$\"", strInWin, strOutTmpWin);
+#else
   SystemF("cp -fv \"$\" \"$\"", strIn, strOutTmp);
+#endif
   // Using windows?
 #if defined(WINDOWS)
   // Patch icon if on windows
   PatchIcon(StrFormat("$/$.ico", strName, strName), strOutTmp);
+  // Runtime locates the bundled .adb at the end of the PE image, not the end
+  // of any pre-existing non-PE data copied from the engine executable.
+  StripExecutableOverlay(strOutTmp);
 #endif
   // Upx resets the attribute, let us reset it or cat won't append properly
+#if !defined(WINDOWS)
   SystemF("chmod -v 755 \"$\"", strOutTmp);
+#endif
   // Append binary and archive to a new file and make it executable
+#if defined(WINDOWS)
+  StdString strAdbWin{ strAdb }, strOutWin{ strOut };
+  for(char &cChar : strAdbWin)
+    if(cChar == '/') cChar = '\\';
+  for(char &cChar : strOutWin)
+    if(cChar == '/') cChar = '\\';
+  SystemF("copy /B /Y \"$\"+\"$\" \"$\"",
+    strOutTmpWin, strAdbWin, strOutWin);
+#else
   SystemF("cat \"$\" \"$\" > \"$\"", strOutTmp, strAdb, strOut);
+#endif
+#if !defined(WINDOWS)
   SystemF("chmod -v 755 \"$\"", strOut);
+#endif
   // Windows?
 #if defined(WINDOWS)
   // Patch CRC checksum in PE header
   PatchChecksum(strOut);
-  // Sign executable
-  CertFunc(strOut);
+  if(ullFlags & PF_CERT)
+  {
+    // Sign executable
+    CertFunc(strOut);
+  }
+  // Compare the packaged executable length with the expected executable and
+  // asset archive lengths; the runtime uses the PE image end as archive offset.
+  FStream fsExeTmp{ strOutTmp, FM_R_B }, fsAssets{ strAdb, FM_R_B },
+          fsExeOut{ strOut, FM_R_B };
+  const int64_t llExeBytes = fsExeTmp.FStreamOpened() ?
+    fsExeTmp.FStreamSize() : -1;
+  const int64_t llAssetBytes = fsAssets.FStreamOpened() ?
+    fsAssets.FStreamSize() : -1;
+  const int64_t llOutputBytes = fsExeOut.FStreamOpened() ?
+    fsExeOut.FStreamSize() : -1;
+  fsExeTmp.FStreamClose();
+  fsAssets.FStreamClose();
+  fsExeOut.FStreamClose();
+  const int64_t llExpectedBytes = llExeBytes >= 0 && llAssetBytes >= 0 ?
+    llExeBytes + llAssetBytes : -1;
+  const size_t stPEImageEnd = cSystem->GetExeSize(strOut);
+  const int64_t llOverlayBytes = llOutputBytes >= 0 &&
+    static_cast<uint64_t>(llOutputBytes) >= stPEImageEnd ?
+      llOutputBytes - static_cast<int64_t>(stPEImageEnd) : -1;
+  cout << "[Package] Embedded assets: executable='" << strOutTmp
+       << "' (" << llExeBytes << " bytes), archive='" << strAdb << "' ("
+       << llAssetBytes << " bytes), output='" << strOut << "' ("
+       << llOutputBytes << " bytes), expected total=" << llExpectedBytes
+       << ", PE image end=" << stPEImageEnd
+       << ", runtime overlay bytes=" << llOverlayBytes
+       << StdIOSEndLine;
+  if(llExeBytes >= 0 && static_cast<uint64_t>(llExeBytes) != stPEImageEnd)
+    cout << "[Package] WARNING: asset archive append position differs from "
+         << "the PE image end!" << StdIOSEndLine;
+  if(!(ullFlags & PF_CERT) && llExpectedBytes >= 0 &&
+     llOutputBytes != llExpectedBytes)
+    cout << "[Package] WARNING: executable + archive size does not match "
+         << "the packaged file size!" << StdIOSEndLine;
 #endif
   // Build archives
-  SystemF("$ a \"$/$-$-$-X$.7z\" \"$\"",
-    envActive.cp7z, DISDIR, strArch, strVer, strOS, uArch, strOut);
+  // The project/tool path has no spaces in the Wine workspace. Leave the
+  // executable token unquoted: popen's cmd.exe /c wrapper otherwise strips
+  // the opening quote and treats the closing quote as part of the command.
+  SystemFOut("$ a \"$/$-$-$-X$.7z\" \"$\"",
+    GetUtilExecutable(envActive.cp7z), DISDIR, strArch, strVer, strOS, uArch,
+    strOut);
 }
 #endif
 /* ------------------------------------------------------------------------- */
@@ -2404,11 +2618,19 @@ static int BuildDistro()
     SystemF("codesign -s \"$\" --deep -f \"$\"", strAuthor, strZipDst);
 #endif
     // Clean-up temporary directory
+#if defined(WINDOWS)
+    SystemF("rmdir /S /Q \"$\"", strTmp);
+#else
     SystemF("rm -rfv \"$\"", strTmp);
+#endif
   } // exception occured?
   catch(const StdException &)
   { // Clean temporary directory
+#if defined(WINDOWS)
+    SystemF("rmdir /S /Q \"$\"", strTmp);
+#else
     SystemF("rm -rfv \"$\"", strTmp);
+#endif
     // Rethrow error
     throw;
   } // Done
@@ -2571,13 +2793,13 @@ static int RebuildAssets(const bool bClear)
   if(!DirFileUnlink(strADBTmp) && StdIsNotError(ENOENT))
     XCL("Failed to remove temporary archive!", "File", strADBTmp);
   // Start archiving and return if succeeded
-  SystemF("$ -t7z -ms=off -mx9 -myx9 -m0=LZMA2:d64m:fb273 -mhe=on -mmt=8 -mqs "
+  SystemFOut("$ -t7z -ms=off -mx9 -myx9 -m0=LZMA2:d64m:fb273 -mhe=on -mmt=8 -mqs "
     "-slp -ssw -sse -r u \"$\" \"-x!*.exe\" \"-x!docs\" \"-x!*.md\" "
     "\"-x!*.crt\" \"-x!*.ico\" \"-x!*." CRASH_EXTENSION "\" \"-x!.*\" "
     "\"-x!prv\" \"-x!*.psd\" \"-x!*." LOG_EXTENSION "\" "
     "\"-x!*." ARCHIVE_EXTENSION "\" \"-x!*." UDB_EXTENSION "\" "
     "\"-x!$\" \"-x!$32\" .",
-      envActive.cp7z, strADB, strName, strName);
+      GetUtilExecutable(envActive.cp7z), strADB, strName, strName);
   // Success
   return 0;
 }
@@ -2945,7 +3167,8 @@ static void SetupZipRepo(const StdString &strLibPath, const StdString &strTmp,
   const StdString strDir{ StrAppend(strTmp, '/', strPSFile) },
                strDirNo{ StrAppend(strDir, bNoDir ? "" : "/..") };
   // Extract the .7z to the temporary directory
-  SystemF("$ x -y -aoa \"$\" -o\"$\"", envActive.cp7z, strLibPath, strDirNo);
+  SystemFOut("$ x -y -aoa \"$\" -o\"$\"",
+    GetUtilExecutable(envActive.cp7z), strLibPath, strDirNo);
   // Set code directory
   SetDirectory(strDir);
 }
@@ -2960,9 +3183,11 @@ static void SetupTarRepoNSD(const StdString &strLibPath,
   const StdString strTar{ StrAppend(strTmp, '/', strPSFile) };
   // Extract the .gz to the temporary directory
   if(!DirLocalFileExists(strTar))
-    SystemNF("$ x -y -so \"$\" > \"$\"", envActive.cp7z, strLibPath, strTar);
+    SystemNF("$ x -y -so \"$\" > \"$\"",
+      GetUtilExecutable(envActive.cp7z), strLibPath, strTar);
   // Extract the .tar to the temporary directory
-  SystemF("$ x -y -aoa \"$\" -o\"$/\"", envActive.cp7z, strTar, strTmp);
+  SystemFOut("$ x -y -aoa \"$\" -o\"$/\"",
+    GetUtilExecutable(envActive.cp7z), strTar, strTmp);
   // Remove tar archive
   if(!DirFileUnlink(strTar))
     XCL("Failed to delete tar file!", "File", strTar);
@@ -4261,7 +4486,9 @@ static int Compile(const bool bSelf)
   // Add object filename to linker
   strCmdLD += StrAppend(strObj, ' ');
   // Perform scan for libraries
-  const Dir dLibs{ LIBDIR, envActive.cpLIB };
+    const StdString strLibDir{ ullFlags & PF_ENVWMINGW ?
+      StrAppend(LIBDIR, "/win64") : LIBDIR };
+    const Dir dLibs{ strLibDir, envActive.cpLIB };
   for(DirEntMapConstIt demciIt{ dLibs.GetFilesBegin() };
                        demciIt != dLibs.GetFilesEnd();
                      ++demciIt)
@@ -4276,7 +4503,7 @@ static int Compile(const bool bSelf)
 #endif
     // Add lib if it contains specified string
     if(demciIt->first.find(strX) != StdNPos)
-      strCmdLD += StrFormat("$/$ ", LIBDIR, demciIt->first);
+      strCmdLD += StrFormat("$/$ ", strLibDir, demciIt->first);
   } // Add default libs
   if(!envActive.cpLDL.empty()) strCmdLD += StrAppend(envActive.cpLDL, ' ');
   // Compile sources
@@ -4359,17 +4586,25 @@ static bool CheckCommandLine(StdString &strX1, StdString &strX2)
   { "!", { 0, PF_VERSION,         PF_ALL|PF_RVER|PF_RPROJ,
     "Show version information."} },
 #if defined(WINDOWS)
-  { "1", { 0, PF_ENVWMSVC,        PF_ENVWLLVM|PF_ENVWCLCP|PF_ENVGCC|PF_OTHERS,
+  { "1", { 0, PF_ENVWMSVC,        PF_ENVWLLVM|PF_ENVWCLCP|PF_ENVGCC|
+                                    PF_ENVWMINGW|PF_OTHERS,
     "Use MSVC environment."} },
-  { "2", { 0, PF_ENVWCLCP,        PF_ENVWMSVC|PF_ENVWLLVM|PF_ENVGCC|PF_OTHERS,
+  { "2", { 0, PF_ENVWCLCP,        PF_ENVWMSVC|PF_ENVWLLVM|PF_ENVGCC|
+                                    PF_ENVWMINGW|PF_OTHERS,
     "Use CLANG-MSVC environment."} },
-  { "3", { 0, PF_ENVWLLVM,        PF_ENVWMSVC|PF_ENVWCLCP|PF_ENVGCC|PF_OTHERS,
+  { "3", { 0, PF_ENVWLLVM,        PF_ENVWMSVC|PF_ENVWCLCP|PF_ENVGCC|
+                                    PF_ENVWMINGW|PF_OTHERS,
     "Use pure CLANG environment."} },
+  { "G", { 0, PF_ENVWMINGW,       PF_ENVWMSVC|PF_ENVWLLVM|PF_ENVWCLCP|
+                                    PF_ENVGCC|PF_OTHERS,
+    "Use Windows MinGW environment (Wine-compatible)."} },
 #elif defined(MACOS)
-  { "1", { 0, PF_ENVXCODE,        PF_ENVWMSVC|PF_ENVWLLVM|PF_ENVGCC|PF_OTHERS,
+  { "1", { 0, PF_ENVXCODE,        PF_ENVWMSVC|PF_ENVWLLVM|PF_ENVGCC|
+                                    PF_ENVWMINGW|PF_OTHERS,
     "Use LLVM environment."} },
 #elif defined(LINUX)
-  { "1", { 0, PF_ENVGCC,         PF_ENVWMSVC|PF_ENVWLLVM|PF_ENVXCODE|PF_OTHERS,
+  { "1", { 0, PF_ENVGCC,         PF_ENVWMSVC|PF_ENVWLLVM|PF_ENVXCODE|
+                                   PF_ENVWMINGW|PF_OTHERS,
     "Use GCC environment."} },
 #endif
   { "4", { 0, PF_X86,             PF_X64|PF_OTHERS,
@@ -4573,13 +4808,11 @@ static int Build(const int iArgC, ArgType**const saArgV,
   { Engine(const int iArgC, ArgType**const saArgV, ArgType**const saEnv) :
       CmdLine{ iArgC, saArgV, saEnv } {}
   } engEngine{ iArgC, saArgV, saEnv };
-  // Set base directory
-#if defined(WINDOWS) // Exe dir will be where link is
-  strBaseDir = cSystem->ENGLoc();
-#else                // Links always run in bin dir
-  strBaseDir = StrAppend(cSystem->ENGLoc(), "..");
-#endif
-  // Set base directory
+  // Keep the caller's current working directory as the project base on every
+  // platform. In particular, do not switch to the executable's directory on
+  // Windows: relative project paths are resolved from the directory the user
+  // launched the build utility from.
+  strBaseDir = cCmdLine->CmdLineGetStartupCWD();
   SetDirectoryNR();
   // Check for unfinished install of new build executable
   CheckForNewBuildExecutable();
@@ -4601,6 +4834,7 @@ static int Build(const int iArgC, ArgType**const saArgV,
   if(ullFlags & PF_ENVWMSVC) SelectEnvironment(envWindowsMSVC);
   if(ullFlags & PF_ENVWLLVM) SelectEnvironment(envWindowsLLVM);
   if(ullFlags & PF_ENVWCLCP) SelectEnvironment(envWindowsLLVMcompat);
+  if(ullFlags & PF_ENVWMINGW) SelectEnvironment(envWindowsMinGW);
   // Compare other flags
   if(ullFlags & PF_EXEC)     return DebugApp();
   if(ullFlags & PF_VERSION)  return ShowVersion();

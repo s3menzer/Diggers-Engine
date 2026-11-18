@@ -15,14 +15,14 @@ cd "$BASE" || exit 1
 
 . "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
-LIB=$BASE/lib
+LIB=$LIB_DIR
 FILEPREFIX=openssl-
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 SRC1=libcrypto.a
 SRC2=libssl.a
 
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   echo Error: $ZIP not found!
   LS=`echo $ARCHIVE/$FILEPREFIX*`
   if [ ! -z "$LS" ]; then
@@ -48,9 +48,26 @@ build()
     return
   fi
 
-  make clean
+  make clean >/dev/null 2>&1 || true
+  rm -f *.o *.obj
 
-  perl Configure $1 -mtune=$2 $3 \
+  if [ "$BUILD_PLATFORM" = windows ]; then
+    # OpenSSL prepends CROSS_COMPILE to tool names itself. Give Configure the
+    # generic names here; the common helper's already-prefixed CC/AR/etc.
+    # would otherwise produce triplets such as <triplet>-<triplet>-gcc.
+    CC=gcc AR=ar RANLIB=ranlib RC=windres \
+      perl Configure "$1" --cross-compile-prefix="${MINGW_TARGET}-" $3 \
+      no-aria no-blake2 no-camellia no-capieng no-cast no-cmac no-cmp no-cms \
+      no-comp no-deprecated no-des no-devcryptoeng no-dh no-dsa no-dso no-dtls1 \
+      no-dynamic-engine no-engine no-external-tests no-filenames \
+      no-gost no-idea no-legacy no-makedepend no-md4 no-mdc2 no-module no-ocb \
+      no-pic no-pinshared no-rc2 no-rc4 no-rmd160 no-scrypt no-seed no-shared \
+      no-siphash no-siv no-sm2 no-sm3 no-sm4 no-srp no-srtp no-ssl-trace \
+      no-ssl3 no-stdio no-tests no-tls1 no-tls1_1 no-trace no-ts no-ubsan \
+      no-ui-console no-unit-test no-uplink no-weak-ssl-ciphers no-whirlpool \
+      no-zlib no-zlib-dynamic
+  else
+    perl Configure $1 -mtune=$2 $3 \
     no-aria no-blake2 no-camellia no-capieng no-cast no-cmac no-cmp no-cms \
     no-comp no-deprecated no-des no-devcryptoeng no-dh no-dsa no-dso no-dtls1 \
     no-dynamic-engine  no-engine no-external-tests no-filenames \
@@ -59,7 +76,8 @@ build()
     no-siphash no-siv no-sm2 no-sm3 no-sm4 no-srp no-srtp no-ssl-trace \
     no-ssl3 no-stdio no-tests no-tls1 no-tls1_1 no-trace no-ts no-ubsan \
     no-ui-console no-unit-test no-uplink no-weak-ssl-ciphers no-whirlpool \
-    no-zlib no-zlib-dynamic
+      no-zlib no-zlib-dynamic
+  fi
 
   if [ $? -ne 0 ]; then
     exit 5
@@ -70,12 +88,12 @@ build()
     exit 6
   fi
 
-  ar -x $SRC1
+  "$AR" -x $SRC1
   if [ $? -ne 0 ]; then
     exit 7
   fi
 
-  ar -x $SRC2
+  "$AR" -x $SRC2
   if [ $? -ne 0 ]; then
     exit 8
   fi
@@ -86,12 +104,17 @@ build()
   fi
 
   rm -rfv "ssl64-${1}-${2}.a" 2>/dev/null
-  ar rcs "ssl64-${1}-${2}.a" *.o
+  OBJECT_PATTERN='*.o'
+  if [ "$BUILD_PLATFORM" = windows ]; then
+    OBJECT_PATTERN='*.obj'
+  fi
+  "$AR" rcs "ssl64-${1}-${2}.a" $OBJECT_PATTERN
+  "$RANLIB" "ssl64-${1}-${2}.a"
   if [ $? -ne 0 ]; then
     exit 10
   fi
 
-  rm -fv *.o
+  rm -f *.o *.obj
   if [ $? -ne 0 ]; then
     exit 11
   fi
@@ -108,7 +131,10 @@ build()
 }
 
 PLATFORM=$(uname)
-if [ "$PLATFORM" == 'Linux' ]; then
+if [ "$BUILD_PLATFORM" = windows ]; then
+  build mingw64 win64 "" win64
+  publish_library ssl64-mingw64-win64.a ssl64.la libssl.a libcrypto.a
+elif [ "$PLATFORM" = 'Linux' ]; then
   build linux-x86_64 generic "" l64
   cp -f ssl64-linux-x86_64-generic.a "${LIB}/ssl64.la"
 else
@@ -121,13 +147,19 @@ if [ $? -ne 0 ]; then
   exit 13
 fi
 
-install_headers "$BASE/include/openssl" "$BASE/$FILE/include/openssl" || exit 14
-if [ "$PLATFORM" = 'Linux' ]; then
+install_headers "$INCLUDE_ROOT/openssl" "$BASE/$FILE/include/openssl" || exit 14
+if [ "$BUILD_PLATFORM" = windows ]; then
+  OPENSSL_CONFIG=win64
+elif [ "$PLATFORM" = 'Linux' ]; then
   OPENSSL_CONFIG=l64
 elif [ "$(uname -m)" = 'arm64' ]; then
   OPENSSL_CONFIG=o64
 else
   OPENSSL_CONFIG=o32
 fi
-cp -f "$BASE/include/openssl/configuration-${OPENSSL_CONFIG}.h" \
-  "$BASE/include/openssl/configuration.h" || exit 15
+cp -f "$INCLUDE_ROOT/openssl/configuration-${OPENSSL_CONFIG}.h" \
+  "$INCLUDE_ROOT/openssl/configuration.h" || exit 15
+if [ "$BUILD_PLATFORM" = windows ]; then
+  cp -f "$INCLUDE_ROOT/openssl/configuration.h" \
+    "$MINGW_PREFIX/include/openssl/configuration.h" || exit 16
+fi

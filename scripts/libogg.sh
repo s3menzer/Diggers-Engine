@@ -15,16 +15,16 @@ cd "$BASE" || exit 1
 
 . "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
-LIB=$BASE/lib
+LIB=$LIB_DIR
 FILEPREFIX=libogg-
 FILEPREFIX2=libvorbis-
 FILE=$FILEPREFIX$1
 FILE2=$FILEPREFIX2$2
-ZIP=$ARCHIVE/$FILE.tar.gz
-ZIP2=$ARCHIVE/$FILE2.tar.gz
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
+ZIP2=$(find_archive "$ARCHIVE/$FILE2") || ZIP2=
 ISOSX=`uname`
 
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   echo Error 1: $ZIP not found!
   LS=`ls $ARCHIVE/$FILEPREFIX* 2>/dev/null`
   if [ ! -z $LS ]; then
@@ -34,7 +34,7 @@ if [ ! -e $ZIP ]; then
   exit 2
 fi
 
-if [ ! -e $ZIP2 ]; then
+if [ -z "$ZIP2" ] || [ ! -e "$ZIP2" ]; then
   echo Error 2: $ZIP2 not found!
   LS=`ls $ARCHIVE/$FILEPREFIX2* 2>/dev/null`
   if [ ! -z $LS ]; then
@@ -69,13 +69,13 @@ fi
 build()
 {
   if [ $ISOSX = 'Darwin' ]; then
-    gcc -O3 -arch $1 -mtune=$2 -mmacosx-version-min=10.15 \
+    "$CC" -O3 -arch $1 -mtune=$2 -mmacosx-version-min=10.15 \
       -Iinclude \
       -I"../${FILE2}/include" \
       -I"../${FILE2}/lib" \
       -c ../${FILE2}/lib/*.c src/*.c
   else
-    gcc -O3 -mtune=$2 \
+    "$CC" -O3 -mtune=$2 \
       -Iinclude \
       -I"../${FILE2}/include" \
       -I"../${FILE2}/lib" \
@@ -88,7 +88,7 @@ build()
 
   rm -rfv "ogg64-${1}-${2}.a" 2>/dev/null
 
-  ar rcs "ogg64-${1}-${2}.a" *.o
+  "$AR" rcs "ogg64-${1}-${2}.a" *.o
   if [ ! $? -eq 0 ]; then
     exit 9;
   fi
@@ -99,12 +99,18 @@ build()
   fi
 }
 
-build x86_64 generic
-
-if [ $ISOSX = 'Darwin' ]; then
+if [ "$BUILD_PLATFORM" = windows ]; then
+  ARCH="-D"
+  EXTRA="-DWIN32"
+  build x86_64 generic
+  publish_library ogg64-x86_64-generic.a ogg64.la \
+    libogg.a libvorbis.a libvorbisfile.a libvorbisenc.a
+elif [ $ISOSX = 'Darwin' ]; then
+  build x86_64 generic
   build arm64 apple-m1
   lipo ogg64-*.a -create -output "${LIB}/ogg64.ma"
 else
+  build x86_64 generic
   cp -f ogg64-x86_64-generic.a "${LIB}/ogg64.la"
 fi
 
@@ -112,6 +118,6 @@ if [ ! $? -eq 0 ]; then
   exit 11;
 fi
 
-install_headers "$BASE/include/ogg" \
+install_headers "$INCLUDE_ROOT/ogg" \
   "$BASE/$FILE/include/ogg/"*.h \
   "$BASE/$FILE2/include/vorbis/"*.h || exit 12

@@ -17,7 +17,7 @@ cd "$BASE" || exit 1
 ARCHIVE=$BASE/archive
 FILEPREFIX=simplewebp-
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 PATCH_FILE=
 if [ -n "${2:-}" ]; then
   case "$2" in
@@ -56,4 +56,4 @@ fi
 cd "$FILE" || exit 5
 
 # SimpleWebP is header-only.
-install_headers "$BASE/include/swp" simplewebp.h
+install_headers "$INCLUDE_ROOT/swp" simplewebp.h

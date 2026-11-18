@@ -27,14 +27,15 @@ class SysBase                          // Members initially private
     EXCEPTION_FPOINT     = 0xF0000003; // Floating point exception
   /* -- Private typedefs --------------------------------------------------- */
   using ExCoList = LookupMap<const DWORD>; // List of Win32 exception strings
+  using SignalHandler = decltype(signal(SIGABRT, SIG_DFL));
   const ExCoList   eclStrings;             // Exception strings strings
   /* -- Private variables -------------------------------------------------- */
   HWND             hwndWindow;         // Main window handle being used
   /* ----------------------------------------------------------------------- */
   const UINT       uOldErrorMode;             // Old error mode
-  const _crt_signal_t fcbAbortCallback,       // Saved abort callback
-                   fcbIllegalStorageAccess,   // " illegal storage access cb
-                   fcbFloatingPointException; // " float point exception cb
+  const SignalHandler fcbAbortCallback,      // Saved abort callback
+                      fcbIllegalStorageAccess, // " illegal storage access cb
+                      fcbFloatingPointException; // " float point exception cb
   /* == Get environment ==================================================== */
   void SEHDumpEnvironment(StdOStringStream &osS) try
   { // Prepare formatted data

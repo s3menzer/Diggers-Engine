@@ -87,7 +87,9 @@ static bool SysSetThreadPriority(const SysThread stLevel)
 }
 /* -- Set thread name in Windows Debugger ---------------------------------- */
 static void SysSetThreadName(const char*const cpName)
-{ // Keep structure aligned
+{
+#if defined(_MSC_VER)                    // MSVC-compatible structured exceptions
+  // Keep structure aligned
 #pragma pack(push, 8)                  // Applies to both 32 and 64-bit
   struct WinDBGThreadData {            // Data to send to Windows Debugger
     DWORD  dwType;                     // Magic type, must be 0x1000.
@@ -110,6 +112,12 @@ static void SysSetThreadName(const char*const cpName)
   // Restore original warning
 #if defined(__clang__)
 # pragma clang diagnostic pop
+#endif
+#else
+  // The debugger thread-name protocol uses a structured exception. GCC/MinGW
+  // does not support MSVC's __try/__except syntax, so omit this optional
+  // debugger-only notification on that compiler.
+  (void)cpName;
 #endif
 }
 /* ------------------------------------------------------------------------- */

@@ -15,12 +15,12 @@ cd "$BASE" || exit 1
 
 . "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
-LIB=$BASE/lib
+LIB=$LIB_DIR
 FILEPREFIX=zlib-
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   echo Error: $ZIP not found!
   LS=`echo $ARCHIVE/$FILEPREFIX*`
   if [ ! -z "${LS}" ]; then
@@ -45,7 +45,11 @@ build()
   make clean 2>/dev/null
 
 
-  ./configure --static 
+  if [ "$BUILD_PLATFORM" = windows ]; then
+    CHOST="$MINGW_TARGET" ./configure --static
+  else
+    ./configure --static
+  fi
               # --archs="-arch ${1}"
   if [ ! $? -eq 0 ]; then
     exit 11
@@ -73,12 +77,15 @@ build()
 }
 
 build x86_64 generic
-# build arm64 apple-m1
-
-# lipo zlib64-*.a -create -output "${LIB}/zlib64.ma"
-if [ ! $? -eq 0 ]; then
-  exit 16
+if [ "$BUILD_PLATFORM" = windows ]; then
+  publish_library zlib64-x86_64-generic.a zlib64.la libz.a
+else
+  cp -f zlib64-x86_64-generic.a "${LIB}/zlib64.la" || exit 16
 fi
 
-install_headers "$BASE/include/zlib" \
+install_headers "$INCLUDE_ROOT/zlib" \
   "$BASE/$FILE/zlib.h" "$BASE/$FILE/zconf.h" || exit 17
+if [ "$BUILD_PLATFORM" = windows ]; then
+  install_headers "$MINGW_PREFIX/include" \
+    "$BASE/$FILE/zlib.h" "$BASE/$FILE/zconf.h" || exit 18
+fi

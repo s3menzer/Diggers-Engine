@@ -486,11 +486,32 @@ static CVarReturn ArchiveInitExe(const bool bCheck)
     const StdString &ssvDir = cSystem->ENGLoc();
     if(!DirSetCWD(ssvDir))
       XCL("Failed to switch to executable directory!", "Directory", ssvDir);
-    // Try to read executable size and if succeeded? Try loading it from the
-    // position that was detected from the executable.
+    // Detect the PE image end and the total file size so any appended archive
+    // can be diagnosed before it is loaded.
     const StdString &strFile = cSystem->ENGFileExt();
-    if(const size_t stSize = cSystem->GetExeSize(strFile))
-      ArchiveInitNew(strFile, stSize);
+    const size_t stExeSize = cSystem->GetExeSize(strFile);
+    StdFStatStruct sfssExe{};
+    const int64_t llFileSize = DirFileSize(strFile, sfssExe) == 0 ?
+      static_cast<int64_t>(sfssExe.st_size) : -1;
+    const int64_t llOverlaySize = llFileSize >= 0 &&
+      static_cast<uint64_t>(llFileSize) >= stExeSize ?
+        llFileSize - static_cast<int64_t>(stExeSize) : -1;
+    cLog->LogInfoExSafe(
+      "Embedded archive probe: exe='$'; cwd='$'; PE end=$; file size=$; "
+      "overlay bytes=$.",
+      cSystem->ENGFull(), DirGetCWD(), stExeSize, llFileSize, llOverlaySize);
+    if(stExeSize)
+    { // Parse archive at the detected PE image end and record its contents
+      if(Archive *const aPtr = ArchiveInitNew(strFile, stExeSize))
+        cLog->LogInfoExSafe("Embedded archive '$' indexed $ files and $ dirs.",
+          strFile, aPtr->ArchiveGetNumFiles(), aPtr->ArchiveGetNumDirs());
+      else cLog->LogWarningExSafe(
+        "Embedded archive '$' at offset $ has no readable entries!",
+        strFile, stExeSize);
+    } // No usable PE end offset detected
+    else cLog->LogWarningExSafe(
+      "Could not determine the PE image end for embedded archive '$'!",
+      strFile);
   } // Status is acceptable regardless
   return ACCEPT;
 }

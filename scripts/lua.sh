@@ -16,16 +16,16 @@ cd "$BASE" || exit 1
 # Archives directory
 ARCHIVE=$BASE/archive
 # Libraries directory
-LIB=$BASE/lib
+LIB=$LIB_DIR
 # Archive prefix
 FILEPREFIX=lua-
 # Specified archive to find
 FILE=$FILEPREFIX$1
 # Location of archive
-ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 
 # Archive doesn't exist
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   # Archive not found
   echo Error: $ZIP not found!
   # Print listing of possible archives
@@ -113,7 +113,7 @@ build()
   echo "*** Building $1 ($2) version ***"
   exists "rm -rfv" *.o
   # Do requested compilation and exit if failed
-  g++ -O3 $ARCH$1 -mtune=$2 \
+  "$CXX" -O3 $ARCH$1 -mtune=$2 \
     $EXTRA \
     -std=c++20 \
     -DLUA_USE_APICHECK \
@@ -121,13 +121,18 @@ build()
     -c src/*.c
   if [ ! $? -eq 0 ]; then exit 12; fi
   # Make an archive of objects and exit if failed
-  ar rcs "lua64-${1}-${2}.a" *.o
+  "$AR" rcs "lua64-${1}-${2}.a" *.o
   if [ ! $? -eq 0 ]; then exit 13; fi
 }
 
 # Get platform and if running Linux?
 PLATFORM=$(uname)
-if [ "$PLATFORM" == 'Linux' ]; then
+if [ "$BUILD_PLATFORM" = windows ]; then
+  ARCH="-D"
+  EXTRA="-DWIN32"
+  build x86_64 generic
+  publish_library lua64-x86_64-generic.a lua64.la liblua.a
+elif [ "$PLATFORM" == 'Linux' ]; then
   # Linux options
   ARCH="-D"
   EXTRA="-DLUA_USE_LINUX"
@@ -161,5 +166,5 @@ else
 fi
 
 # Success
-install_headers "$BASE/include/lua" "$BASE/$FILE/src"/*.h || exit 18
+install_headers "$INCLUDE_ROOT/lua" "$BASE/$FILE/src"/*.h || exit 18
 echo "*** Completed ***"

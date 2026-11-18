@@ -14,14 +14,18 @@ BASE=$(dirname $(dirname "$SCRIPT_DIR"))
 cd "$BASE" || exit 1
 
 . "$BASE/scripts/common.sh" || exit 1
+if [ "$BUILD_PLATFORM" = windows ]; then
+  echo "[skip] Engine's Windows build does not use ncurses."
+  exit 0
+fi
 ARCHIVE=$BASE/archive
-LIB=$BASE/lib
+LIB=$LIB_DIR
 FILEPREFIX=ncurses-
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 ISOSX=`uname`
 
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   echo Error: $ZIP not found!
   LS=`ls $ARCHIVE/$FILEPREFIX* 2>/dev/null`
   if [ ! -z $LS ]; then
@@ -92,6 +96,6 @@ if [ ! $? -eq 0 ]; then
 fi
 
 # Keep the documented prefix, and also expose ncurses.h for Engine's bare include.
-install_headers "$BASE/include/ncurses" "$BASE/$FILE/include/"*.h || exit 17
-install_headers "$BASE/include" "$BASE/$FILE/include/"*.h || exit 18
-cp -f "$BASE/include/curses.h" "$BASE/include/ncurses.h" || exit 19
+install_headers "$INCLUDE_ROOT/ncurses" "$BASE/$FILE/include/"*.h || exit 17
+install_headers "$INCLUDE_ROOT" "$BASE/$FILE/include/"*.h || exit 18
+cp -f "$INCLUDE_ROOT/curses.h" "$INCLUDE_ROOT/ncurses.h" || exit 19

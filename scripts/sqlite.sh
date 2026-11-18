@@ -15,13 +15,13 @@ cd "$BASE" || exit 1
 
 . "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
-LIB=$BASE/lib
+LIB=$LIB_DIR
 FILEPREFIX=sqlite-amalgamation
 FILE=$FILEPREFIX-$1
-ZIP=$ARCHIVE/$FILE.zip
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 ISOSX=`uname`
 
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   echo Error: $ZIP not found!
   LS=`ls $ARCHIVE/$FILEPREFIX* 2>/dev/null`
   if [ ! -z "$LS" ]; then
@@ -43,9 +43,13 @@ fi
 
 build()
 {
-  gcc -O3 -mtune=$2 \
+  OS_FLAGS=-DSQLITE_OS_UNIX
+  if [ "$BUILD_PLATFORM" = windows ]; then
+    OS_FLAGS=
+  fi
+  "$CC" -O3 -mtune=$2 \
     -DSQLITE_DEFAULT_AUTOVACUUM=2 -DSQLITE_TEMP_STORE=2 \
-    -DSQLITE_ENABLE_NULL_TRIM -DSQLITE_OS_UNIX -DSQLITE_OMIT_LOAD_EXTENSION \
+    -DSQLITE_ENABLE_NULL_TRIM $OS_FLAGS -DSQLITE_OMIT_LOAD_EXTENSION \
     -DSQLITE_OMIT_WAL -DSQLITE_OMIT_UTF16 -DSQLITE_OMIT_DEPRECATED \
     -DSQLITE_THREADSAFE -DSQLITE_ENABLE_MATH_FUNCTIONS \
     -c sqlite3.c
@@ -55,7 +59,7 @@ build()
 
   rm -rfv "sqlite64-${1}-${2}.a" 2>/dev/null
 
-  ar rcs "sqlite64-${1}-${2}.a" sqlite3.o
+  "$AR" rcs "sqlite64-${1}-${2}.a" sqlite3.o
   if [ ! $? -eq 0 ]; then
     exit 6;
   fi
@@ -64,11 +68,15 @@ build()
 }
 
 
-build x86_64 generic
-if [ $ISOSX = 'Darwin' ]; then
+if [ "$BUILD_PLATFORM" = windows ]; then
+  build x86_64 generic
+  publish_library sqlite64-x86_64-generic.a sqlite64.la libsqlite3.a
+elif [ $ISOSX = 'Darwin' ]; then
+  build x86_64 generic
   build arm64 apple-m1
   lipo sqlite64*.a -create -output "${LIB}/sqlite64.ma"
 else
+  build x86_64 generic
   cp -f sqlite64*.a "${LIB}/sqlite64.la"
 fi
 
@@ -76,5 +84,5 @@ if [ ! $? -eq 0 ]; then
   exit 7;
 fi
 
-install_headers "$BASE/include/sql" \
+install_headers "$INCLUDE_ROOT/sql" \
   "$BASE/$FILE/sqlite3.h" "$BASE/$FILE/sqlite3ext.h" || exit 8

@@ -15,12 +15,12 @@ cd "$BASE" || exit 1
 
 . "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
-LIB=$BASE/lib
+LIB=$LIB_DIR
 FILEPREFIX=libnsgif-
 FILE=$FILEPREFIX$1
-ZIP=$ARCHIVE/$FILE.tar.gz
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
 
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   echo Error: $ZIP not found!
   LS=`ls $ARCHIVE/$FILEPREFIX* 2>/dev/null`
   if [ ! -z "${LS}" ]; then
@@ -42,14 +42,14 @@ fi
 
 build()
 {
-  gcc -O3 $ARCH$1 $EXTRA -Iinclude -c src/*.c
+  "$CC" -O3 $ARCH$1 $EXTRA -Iinclude -c src/*.c
 
   if [ ! $? -eq 0 ]; then
     exit 5;
   fi
 
   rm -rfv "nsgif64-${1}-${2}.a" 2>/dev/null
-  ar rcs "nsgif64-${1}-${2}.a" *.o
+  "$AR" rcs "nsgif64-${1}-${2}.a" *.o
   if [ ! $? -eq 0 ]; then
     exit 6;
   fi
@@ -58,7 +58,12 @@ build()
 }
 
 PLATFORM=$(uname)
-if [ "$PLATFORM" == 'Linux' ]; then
+if [ "$BUILD_PLATFORM" = windows ]; then
+  ARCH="-D"
+  EXTRA="-DWIN32 -D_WIN32"
+  build x86_64 generic
+  publish_library nsgif64-x86_64-generic.a nsgif64.la libnsgif.a
+elif [ "$PLATFORM" == 'Linux' ]; then
   ARCH="-D"
   EXTRA=""
   build x86_64 generic
@@ -75,4 +80,4 @@ if [ ! $? -eq 0 ]; then
   exit 7;
 fi
 
-install_headers "$BASE/include/gif" "$BASE/$FILE/include"/*.h || exit 8
+install_headers "$INCLUDE_ROOT/gif" "$BASE/$FILE/include"/*.h || exit 8

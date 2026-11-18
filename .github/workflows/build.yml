@@ -1,4 +1,4 @@
-name: Linux Docker build
+name: Linux and Windows Docker builds
 
 on:
   push:
@@ -15,12 +15,32 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build Linux builder image
-        run: >-
-          docker build
-          --file .build-helpers/docker/Dockerfile.linux
-          --tag mhatxotic-engine-linux-builder:ci
-          .build-helpers/docker
+      - name: Check out Diggers game source
+        uses: actions/checkout@v4
+        with:
+          repository: s3menzer/Diggers
+          ref: cd556a06dec2250b3cc91563ab032899257a8e61
+          path: Diggers
+
+      - name: Build and package Diggers for Linux
+        env:
+          CONTAINER_ENGINE: docker
+          LINUX_BUILDER_IMAGE: mhatxotic-engine-linux-builder:ci
+        run: ./.build-helpers/scripts/docker-build-linux.sh
+
+      - name: Upload Linux Diggers package
+        uses: actions/upload-artifact@v4
+        with:
+          name: diggers-linux-${{ github.sha }}
+          path: distro/Diggers-*-Ubuntu-X64.7z
+          if-no-files-found: error
+          compression-level: 0
+
+  windows:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out Engine
+        uses: actions/checkout@v4
 
       - name: Check out Diggers game source
         uses: actions/checkout@v4
@@ -29,37 +49,16 @@ jobs:
           ref: cd556a06dec2250b3cc91563ab032899257a8e61
           path: Diggers
 
-      - name: Build and package Diggers in Linux container
-        run: |
-          docker run --rm \
-            --volume "$GITHUB_WORKSPACE:/workspace" \
-            --workdir /workspace \
-            --user "$(id -u):$(id -g)" \
-            --env TERM=xterm \
-            --env HOME=/tmp/engine-linux-ci-home \
-            mhatxotic-engine-linux-builder:ci \
-            bash -e -u -o pipefail -c '
-              mkdir -p "$HOME"
-              python3 ./.build-helpers/scripts/download-linux-dependencies.py
-              python3 ./.build-helpers/scripts/create-build-json.py
-              mkdir -p ./bin
-              ./scripts/build-linux.sh
-              mkdir -p ./debug
-              # Rebuild the game asset archive, compile the default Linux
-              # 64-bit beta executable, then package the executable with its
-              # assets into distro/.
-              ./bin/build.elf LV
-              ./bin/build.elf V
-              ./bin/build.elf fV
-              test -s ./bin/engine64.elf
-              test -s ./Diggers/Diggers.adb
-              find ./distro -maxdepth 1 -type f -name "Diggers-*-Ubuntu-X64.7z" -print -quit | grep -q .
-            '
+      - name: Build and package Diggers for Windows
+        env:
+          CONTAINER_ENGINE: docker
+          WINDOWS_BUILDER_IMAGE: mhatxotic-engine-windows-builder:ci
+        run: ./.build-helpers/scripts/docker-build-windows.sh
 
-      - name: Upload Linux Diggers package
+      - name: Upload Windows Diggers package
         uses: actions/upload-artifact@v4
         with:
-          name: diggers-linux-${{ github.sha }}
-          path: distro/Diggers-*-Ubuntu-X64.7z
+          name: diggers-windows-${{ github.sha }}
+          path: distro/Diggers-*-Windows-X64.7z
           if-no-files-found: error
           compression-level: 0

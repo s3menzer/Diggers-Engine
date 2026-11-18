@@ -22,15 +22,15 @@
 #  ifdef X86
 #    define BITS  " 32-Bit"
 #    define EXE   "ENGINE32.EXE"
-#    define ICO   "WIN32\ENGINE32.ICO"
+#    define ICO   "WIN32/ENGINE32.ICO"
 #  elif X64
 #    define BITS  " 64-Bit"
 #    define EXE   "ENGINE64.EXE"
-#    define ICO   "WIN32\ENGINE64.ICO"
+#    define ICO   "WIN32/ENGINE64.ICO"
 #  else
 #    define BITS  " ??-Bit"
 #    define EXE   "ENGINE.EXE"
-#    define ICO   "WIN32\ENGINE32.ICO"
+#    define ICO   "WIN32/ENGINE32.ICO"
 #  endif
 /* ------------------------------------------------------------------------- */
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_UK
@@ -63,11 +63,11 @@ FILETYPE           VFT_APP
   }
   BLOCK "VarFileInfo"
   {
-    VALUE "Translation",        0x0809 0x04B0
+    VALUE "Translation",        0x0809, 0x04B0
   }
 }
 /* ------------------------------------------------------------------------- */
-CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "WIN32\ENGINE.XML"
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "WIN32/ENGINE.XML"
 /* ------------------------------------------------------------------------- */
 #endif                                 // RC_INVOKED
 /* == End-of-File ========================================================== */

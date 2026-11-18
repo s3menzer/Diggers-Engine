@@ -200,7 +200,9 @@ class SysProcess :                     // Need this before of System init order
 #endif
   /* ----------------------------------------------------------------------- */
   void InitCRTParameters()
-  { // Set runtime error callback
+  {
+#if defined(_MSC_VER)                    // These callbacks are MSVC CRT APIs
+    // Set runtime error callback
     _set_invalid_parameter_handler(CException);
     // Set runtime error callback (Ignored when _DEBUG not set)
     _RTC_SetErrorFuncW(VisualCRTError);
@@ -219,6 +221,7 @@ class SysProcess :                     // Need this before of System init order
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_WNDW);
     _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_WNDW);
     _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_WNDW);
+#endif
   }
   /* ----------------------------------------------------------------------- */
   void LoadCOM()
@@ -300,10 +303,12 @@ class SysProcess :                     // Need this before of System init order
   DTORHELPER(~SysProcess,
     // Init file handle for storing CRT issues
     InitReportMemoryLeaks();
+#if defined(_MSC_VER)                    // Remove MSVC-only CRT hooks
     // Remove debug report hook (because exceptions will crash)
     _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, CRTException);
     // Remove runtime error callback
     _RTC_SetErrorFunc(nullptr);
+#endif
     // Deinitialise COM
     CoUninitialize();
     // If mutex initialised? Close the handle and log if failed

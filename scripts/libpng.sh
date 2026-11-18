@@ -15,16 +15,16 @@ cd "$BASE" || exit 1
 
 . "$BASE/scripts/common.sh" || exit 1
 ARCHIVE=$BASE/archive
-LIB=$BASE/lib
+LIB=$LIB_DIR
 FILEPREFIX=libpng-
 FILEPREFIX2=zlib-
 FILE=$FILEPREFIX$1
 FILE2=$FILEPREFIX2$2
-ZIP=$ARCHIVE/$FILE.tar.gz
-ZIP2=$ARCHIVE/$FILE2.tar.gz
+ZIP=$(find_archive "$ARCHIVE/$FILE") || ZIP=
+ZIP2=$(find_archive "$ARCHIVE/$FILE2") || ZIP2=
 ISOSX=`uname`
 
-if [ ! -e $ZIP ]; then
+if [ -z "$ZIP" ] || [ ! -e "$ZIP" ]; then
   echo Error 1: $ZIP not found!
   LS=`ls $ARCHIVE/$FILEPREFIX* 2>/dev/null`
   if [ ! -z "${LS}" ]; then
@@ -34,7 +34,7 @@ if [ ! -e $ZIP ]; then
   exit 2
 fi
 
-if [ ! -e $ZIP2 ]; then
+if [ -z "$ZIP2" ] || [ ! -e "$ZIP2" ]; then
   echo Error 2: $ZIP2 not found!
   LS=`ls $ARCHIVE/$FILEPREFIX2* 2>/dev/null`
   if [ ! -z $LS ]; then
@@ -65,7 +65,13 @@ build()
 {
   make clean 2>/dev/null
 
-  if [ $ISOSX = 'Darwin' ]; then
+  if [ "$BUILD_PLATFORM" = windows ]; then
+    CC="$CC" CFLAGS="-O3 -mtune=generic" \
+      CPPFLAGS="-I$MINGW_PREFIX/include" \
+      LDFLAGS="-L$MINGW_PREFIX/lib" \
+      configure_target --disable-shared --enable-static \
+        --with-zlib-prefix="$MINGW_PREFIX"
+  elif [ $ISOSX = 'Darwin' ]; then
     ./configure --with-zlib-prefix="${ZLIBDIR}" \
                 CC="gcc -O3 \
                 -arch ${1} -mtune=${2} -mmacosx-version-min=10.15"
@@ -90,11 +96,15 @@ build()
   fi
 }
 
-build x86_64 generic
-if [ $ISOSX = 'Darwin' ]; then
+if [ "$BUILD_PLATFORM" = windows ]; then
+  build x86_64 generic
+  publish_library png64-x86_64-generic.a png64.la libpng16.a
+elif [ $ISOSX = 'Darwin' ]; then
+  build x86_64 generic
   build arm64 apple-m1
   lipo png64-*.a -create -output "${LIB}/png64.ma"
 else
+  build x86_64 generic
   cp -f png64-x86_64-generic.a "${LIB}/png64.la"
 fi
 
@@ -102,5 +112,5 @@ if [ ! $? -eq 0 ]; then
   exit 10
 fi
 
-install_headers "$BASE/include/png" \
+install_headers "$INCLUDE_ROOT/png" \
   "$BASE/$FILE/png.h" "$BASE/$FILE/pngconf.h" "$BASE/$FILE/pnglibconf.h" || exit 11
