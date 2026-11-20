@@ -64,18 +64,18 @@ trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
 
 "$EXTRACTOR" x -y -aos "$ZIP" "-o$STAGING" >/dev/null || exit 6
-SEVEN_ZIP_EXE=$(find "$STAGING" -type f -iname '7za.exe' -print -quit)
-if [ -z "$SEVEN_ZIP_EXE" ]; then
-  echo "Error: '$ZIP' did not contain 7za.exe." >&2
+SEVEN_ZIP_DIR=$STAGING/x64
+SEVEN_ZIP_EXE=$SEVEN_ZIP_DIR/7za.exe
+if [ ! -f "$SEVEN_ZIP_EXE" ]; then
+  echo "Error: '$ZIP' did not contain the expected x64/7za.exe." >&2
+  find "$STAGING" -type f -iname '7za.exe' -print >&2
   exit 7
 fi
 
-# Preserve optional companion DLLs beside the renamed command-line executable.
-SEVEN_ZIP_DIR=$(dirname "$SEVEN_ZIP_EXE")
-for DLL in 7za.dll 7z.dll; do
-  if [ -f "$SEVEN_ZIP_DIR/$DLL" ]; then
-    cp -f "$SEVEN_ZIP_DIR/$DLL" "$DEST/$DLL" || exit 8
-  fi
+# Keep all companion DLLs from the same x64 distribution beside the executable.
+for DLL in "$SEVEN_ZIP_DIR"/*.dll; do
+  [ -f "$DLL" ] || continue
+  cp -f "$DLL" "$DEST/" || exit 8
 done
 mv -f "$SEVEN_ZIP_EXE" "$DEST/7Z.EXE" || exit 8
 chmod +x "$DEST/7Z.EXE" || exit 9

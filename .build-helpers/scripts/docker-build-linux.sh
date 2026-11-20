@@ -92,6 +92,19 @@ exec "$ENGINE" run --rm "${TTY_ARGS[@]}" "${RUN_ARGS[@]}" \
     ./bin/build.elf fV
     test -s ./bin/engine64.elf
     test -s ./Diggers/Diggers.adb
+    mkdir -p ./distro
+    cat > ./distro/start.sh <<START_SH
+#!/usr/bin/env bash
+set -euo pipefail
+
+LC_ALL=C \
+LANG=C \
+XDG_SESSION_TYPE=wayland \
+XCURSOR_THEME=Adwaita XCURSOR_SIZE=24 \
+ALSOFT_DRIVERS=pipewire,pulse,alsa \
+./Diggers.elf
+START_SH
+    chmod +x ./distro/start.sh
     find ./distro -maxdepth 1 -type f -name "Diggers-*-Ubuntu-X64.7z" \
       -print -quit | grep -q .
   '

@@ -142,6 +142,12 @@ wine ./bin/build.exe G8bLVv
 wine ./bin/build.exe G8bfVv
 test -s ./bin/engine64.exe
 test -s ./Diggers/Diggers.adb
+mkdir -p ./distro
+cat > ./distro/start.cmd <<'START_CMD'
+set LC_ALL=C
+set LANG=C
+Diggers.exe
+START_CMD
 find ./distro -maxdepth 1 -type f -name "Diggers-*-Windows-X64.7z" \
   -print -quit | grep -q .
 BUILD
