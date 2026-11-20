@@ -2047,7 +2047,7 @@ static FILE *POpen(const StdString &strCL) { return StdPOpen(strCL); }
 static int PClose(FILE*const fHandle) { return StdPClose(fHandle); }
 /* ------------------------------------------------------------------------- */
 static int SpecialExecute(const StdString strCmd, const size_t stML,
-  const bool bErrOverride = false)
+  const bool bErrOverride = false, const bool bKeepStderrSeparate = false)
 { // Clear error number
   StdSetError(0);
   // Write string tidily
@@ -2056,7 +2056,8 @@ static int SpecialExecute(const StdString strCmd, const size_t stML,
   const ClkTimePoint tpBegin{ cmHiRes.GetTime() };
   // Execute process and capture output. throw StdRunTimeError if failed
   FILE*const fpPipe = POpen(StrAppend(strCmd,
-    (ullFlags & PF_SYSNOERR) || bErrOverride ? " 2>&1" : caBlank));
+    !bKeepStderrSeparate &&
+      ((ullFlags & PF_SYSNOERR) || bErrOverride) ? " 2>&1" : caBlank));
   if(!fpPipe)
     XCL("Could not open pipe to execute process!",
         "CmdLine", strCmd, "Directory", DirGetCWD());
@@ -2783,7 +2784,9 @@ static int CertGen()
 static int RebuildAssets(const bool bClear)
 { // Build filename of archive database and tempa rchive database
   const StdString strADB{ StrAppend(strName, '.', ARCHIVE_EXTENSION) },
-               strADBTmp{ StrAppend(strADB, ".tmp") };
+               strADBTmp{ StrAppend(strADB, ".tmp") },
+               str7zStdOut{ ".7z.stdout.tmp" },
+               str7zStdErr{ ".7z.stderr.tmp" };
   // Goto assets directory
   SetDirectory(strName);
   // Delete original file if requested. Throw error if it wasn't missing
@@ -2792,14 +2795,53 @@ static int RebuildAssets(const bool bClear)
   // Delete temporary file created by 7zip if it exists
   if(!DirFileUnlink(strADBTmp) && StdIsNotError(ENOENT))
     XCL("Failed to remove temporary archive!", "File", strADBTmp);
-  // Start archiving and return if succeeded
-  SystemFOut("$ -t7z -ms=off -mx9 -myx9 -m0=LZMA2:d64m:fb273 -mhe=on -mmt=8 -mqs "
+  // Delete stale stream captures so a launch failure cannot print old output.
+  if(!DirFileUnlink(str7zStdOut) && StdIsNotError(ENOENT))
+    XCL("Failed to remove previous 7-Zip stdout capture!",
+        "File", str7zStdOut);
+  if(!DirFileUnlink(str7zStdErr) && StdIsNotError(ENOENT))
+    XCL("Failed to remove previous 7-Zip stderr capture!",
+        "File", str7zStdErr);
+  // Capture stdout and stderr separately so diagnostics are visible even when
+  // the archive command fails before producing its normal progress output.
+  const StdString strCommand{ StrFormat(
+    "$ -t7z -ms=off -mx9 -myx9 -m0=LZMA2:d64m:fb273 -mhe=on -mmt=8 -mqs "
     "-slp -ssw -sse -r u \"$\" \"-x!*.exe\" \"-x!docs\" \"-x!*.md\" "
     "\"-x!*.crt\" \"-x!*.ico\" \"-x!*." CRASH_EXTENSION "\" \"-x!.*\" "
     "\"-x!prv\" \"-x!*.psd\" \"-x!*." LOG_EXTENSION "\" "
     "\"-x!*." ARCHIVE_EXTENSION "\" \"-x!*." UDB_EXTENSION "\" "
-    "\"-x!$\" \"-x!$32\" .",
-      GetUtilExecutable(envActive.cp7z), strADB, strName, strName);
+    "\"-x!$\" \"-x!$32\" . > \"$\" 2> \"$\"",
+      GetUtilExecutable(envActive.cp7z), strADB, strName, strName,
+      str7zStdOut, str7zStdErr) };
+  const int iExit{ SpecialExecute(strCommand, StdNPos, false, true) };
+  // Emit each stream with a label, then remove the temporary captures.
+  const auto PrintAndRemoveOutput = [](const StdStringView &ssvLabel,
+    const StdString &strFile)
+  { cout << "[7-Zip " << ssvLabel << "]" << StdIOSEndLine;
+    { FStream fsOutput{ strFile, FM_R_B };
+      if(fsOutput)
+      { const StdString strOutput{
+          fsOutput.FStreamReadBlockSafe().MemToStringSafe() };
+        if(strOutput.empty())
+          cout << "(empty)" << StdIOSEndLine;
+        else
+        { cout << strOutput;
+          if(strOutput.back() != '\n' && strOutput.back() != '\r')
+            cout << StdIOSEndLine;
+        }
+      }
+      else cout << "(no output captured)" << StdIOSEndLine;
+    }
+    if(!DirFileUnlink(strFile) && StdIsNotError(ENOENT))
+      cout << "[7-Zip] Could not remove capture file '" << strFile
+           << "'." << StdIOSEndLine;
+  };
+  PrintAndRemoveOutput("stdout", str7zStdOut);
+  PrintAndRemoveOutput("stderr", str7zStdErr);
+  // Report failure only after printing the captured diagnostics.
+  if(iExit)
+    XCL("Execution returned error status!", "CmdLine", strCommand,
+        "Directory", DirGetCWD(), "Exit", iExit);
   // Success
   return 0;
 }
