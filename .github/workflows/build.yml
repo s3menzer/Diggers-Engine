@@ -11,7 +11,7 @@ permissions:
 jobs:
   linux:
     # Temporarily disabled while the Linux build is being investigated.
-    if: ${{ false }}
+    if: ${{ true }}
     runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
