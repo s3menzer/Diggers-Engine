@@ -296,7 +296,7 @@ def download(url: str, destination: Path, expected_sha256: str | None,
     request = urllib.request.Request(url, headers={"User-Agent": "Engine-2-dependency-fetcher/1"})
     digest = hashlib.sha256()
     try:
-        with urllib.request.urlopen(request, timeout=60, context=ssl_context) as response, destination.open("wb") as output:
+        with urllib.request.urlopen(request, timeout=30, context=ssl_context) as response, destination.open("wb") as output:
             final_url = response.geturl()
             if not final_url.startswith("https://"):
                 raise FetchError(f"Download redirected to a non-HTTPS URL: {final_url}")
