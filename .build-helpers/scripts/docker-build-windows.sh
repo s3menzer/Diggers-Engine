@@ -116,11 +116,23 @@ CONTAINER_BUILD_SCRIPT=$(cat <<'BUILD'
 set -euo pipefail
 mkdir -p ./bin ./debug
 BUILD_TARGET=windows python3 ./.build-helpers/scripts/download-linux-dependencies.py
+# The dependency runner normally installs this tool; verify it before the
+# asset build and retry directly if the generated workspace lacks it.
+if [[ ! -s ./util/7Z.EXE ]]; then
+  SEVEN_ZIP_VERSION="$(python3 -c 'import json; from pathlib import Path; print(json.loads(Path(".build-helpers/versions-linux.json").read_text())["libs"]["7zip"]["version"])')"
+  echo "[setup] util/7Z.EXE missing after dependency setup; installing pinned 7-Zip ${SEVEN_ZIP_VERSION}."
+  ./scripts/7z.sh "$SEVEN_ZIP_VERSION"
+fi
+if [[ ! -s ./util/7Z.EXE ]]; then
+  echo "Error: dependency setup did not create ./util/7Z.EXE." >&2
+  ls -la ./util ./archive 2>&1 || true
+  exit 1
+fi
 python3 ./.build-helpers/scripts/create-build-json.py
 ./scripts/build-windows.sh "${BUILD_TYPE:-Release}"
-wine ./bin/build.exe G8bV
-wine ./bin/build.exe G8bLV
-wine ./bin/build.exe G8bfV
+wine ./bin/build.exe G8bVv
+wine ./bin/build.exe G8bLVv
+wine ./bin/build.exe G8bfVv
 test -s ./bin/engine64.exe
 test -s ./Diggers/Diggers.adb
 find ./distro -maxdepth 1 -type f -name "Diggers-*-Windows-X64.7z" \
