@@ -128,6 +128,13 @@ if [[ ! -s ./util/7Z.EXE ]]; then
   ls -la ./util ./archive 2>&1 || true
   exit 1
 fi
+# Wine launches this PE executable from the Linux workspace mount; preserve
+# its executable bit even if an existing copy was extracted without one.
+chmod +x ./util/7Z.EXE
+if [[ ! -x ./util/7Z.EXE ]]; then
+  echo "Error: util/7Z.EXE is not executable by Wine." >&2
+  exit 1
+fi
 python3 ./.build-helpers/scripts/create-build-json.py
 ./scripts/build-windows.sh "${BUILD_TYPE:-Release}"
 wine ./bin/build.exe G8bVv

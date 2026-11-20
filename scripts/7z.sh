@@ -78,5 +78,6 @@ for DLL in 7za.dll 7z.dll; do
   fi
 done
 mv -f "$SEVEN_ZIP_EXE" "$DEST/7Z.EXE" || exit 8
+chmod +x "$DEST/7Z.EXE" || exit 9
 
 echo "Installed Windows 7-Zip $1: $DEST/7Z.EXE"
