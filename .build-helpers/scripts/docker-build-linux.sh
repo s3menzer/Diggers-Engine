@@ -9,8 +9,8 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   cat <<'USAGE'
 Usage: .build-helpers/scripts/docker-build-linux.sh
 
-Builds the Linux dependencies, Engine helper, Diggers assets, executable,
-and distributable package in the Linux builder container.
+Builds Linux dependencies, then uses the Linux Makefile to compile the game,
+refresh its assets, and create the distro package in the builder container.
 USAGE
   exit 0
 fi
@@ -80,19 +80,20 @@ exec "$ENGINE" run --rm "${TTY_ARGS[@]}" "${RUN_ARGS[@]}" \
   --workdir /workspace \
   --env HOME=/tmp/engine-linux-build-home \
   --env TERM="${TERM:-xterm}" \
+  --env BUILD_TYPE="${BUILD_TYPE:-Release}" \
+  --env BUILD_DEFINE="${BUILD_DEFINE:-BETA}" \
+  --env JOBS="${JOBS:-}" \
+  --env SEVEN_ZIP="${SEVEN_ZIP:-7zz}" \
   "$IMAGE" bash -euo pipefail -c '
-    mkdir -p "$HOME"
+    mkdir -p "$HOME" ./bin ./debug ./distro
     python3 ./.build-helpers/scripts/download-linux-dependencies.py
-    python3 ./.build-helpers/scripts/create-build-json.py
-    mkdir -p ./bin
-    ./scripts/build-linux.sh
-    mkdir -p ./debug
-    ./bin/build.elf V
-    ./bin/build.elf LV
-    ./bin/build.elf fV
+    make --jobs="${JOBS:-$(nproc)}" -f .build-helpers/make/makefile.linux linux \
+      BUILD_TYPE="${BUILD_TYPE:-Release}" \
+      BUILD_DEFINE="${BUILD_DEFINE:-BETA}" \
+      JOBS="${JOBS:-$(nproc)}"
     test -s ./bin/engine64.elf
     test -s ./Diggers/Diggers.adb
-    mkdir -p ./distro
+    test -s ./distro/Diggers-R64-Ubuntu-X64.7z
     cat > ./distro/start.sh <<START_SH
 #!/usr/bin/env bash
 set -euo pipefail

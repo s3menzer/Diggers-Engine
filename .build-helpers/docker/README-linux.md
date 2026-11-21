@@ -18,6 +18,10 @@
 ./.build-helpers/scripts/docker-build-linux.sh
 ```
 
-The build entry point creates the image if needed, then downloads/builds the
-Linux dependencies, builds the helper, Diggers assets and executable, and
-packages the game. GitHub Actions uses the same script.
+The build entry point creates the image if needed, downloads/builds the Linux
+dependencies, then runs `.build-helpers/make/makefile.linux` to compile the
+game, refresh the Diggers assets, and create the distro package. GitHub Actions
+uses the same script. If dependencies are already built, invoke the Makefile
+from the project root with `make -f .build-helpers/make/makefile.linux linux`.
+`BUILD_TYPE`, `BUILD_DEFINE`, and `JOBS` configure it; `SEVEN_ZIP` selects the
+7-Zip command (default `7zz`).

@@ -1,0 +1,108 @@
+# Native Linux build and distro packaging based on build-commands-linux.log.
+# Run from the Engine_3 project root (or use `make -f .build-helpers/make/makefile.linux`).
+
+SHELL := /bin/bash
+.SHELLFLAGS := -eu -o pipefail -c
+.ONESHELL:
+.DELETE_ON_ERROR:
+
+LINUX_CC ?= gcc
+SEVEN_ZIP ?= 7zz
+BUILD_TYPE ?= Release
+BUILD_DEFINE ?= BETA
+JOBS ?= 8
+
+ENGINE_OBJECT := debug/engine64.o
+ENGINE_EXE := bin/engine64.elf
+DISTRO_ARCHIVE := distro/Diggers-R64-Ubuntu-X64.7z
+BUILD_CONFIG_STAMP := build-linux/.makefile-linux-config
+ENGINE_HEADERS := $(shell find src include -type f \( -name '*.hpp' -o -name '*.h' \) -print 2>/dev/null)
+
+LINUX_LIBRARIES := \
+	lib/al64.la \
+	lib/ft64.la \
+	lib/glfw64.la \
+	lib/jpeg64.la \
+	lib/lua64.la \
+	lib/lzma64.la \
+	lib/nc64.la \
+	lib/nsgif64.la \
+	lib/ogg64.la \
+	lib/png64.la \
+	lib/sdl64.la \
+	lib/sqlite64.la \
+	lib/ssl64.la \
+	lib/theora64.la \
+	lib/zlib64.la
+
+ifeq ($(filter $(BUILD_TYPE),Release release),)
+  ifneq ($(filter $(BUILD_TYPE),Debug debug),)
+    OPT_FLAGS := -O0 -g
+  else
+    $(error Unsupported BUILD_TYPE '$(BUILD_TYPE)' (expected Release or Debug))
+  endif
+else
+  OPT_FLAGS := -O2
+endif
+
+ifeq ($(filter $(BUILD_DEFINE),RELEASE ALPHA BETA),)
+  $(error Unsupported BUILD_DEFINE '$(BUILD_DEFINE)' (expected RELEASE, ALPHA, or BETA))
+endif
+
+.PHONY: all linux assets clean FORCE
+all: linux
+linux: $(DISTRO_ARCHIVE)
+
+FORCE:
+
+$(BUILD_CONFIG_STAMP): FORCE
+	mkdir -p build-linux
+	printf '%s\n' '$(BUILD_TYPE)|$(BUILD_DEFINE)|$(LINUX_CC)' > "$@.tmp"
+	if ! cmp -s "$@.tmp" "$@"; then mv -f "$@.tmp" "$@"; else rm -f "$@.tmp"; fi
+
+$(ENGINE_OBJECT): src/engine.cpp $(BUILD_CONFIG_STAMP) $(ENGINE_HEADERS)
+	mkdir -p debug bin
+	$(LINUX_CC) -c -shared-libgcc -mtune=generic -fmax-errors=1 \
+	  -funwind-tables -Iinclude -Iinclude/ft -std=c++20 -march=x86-64 \
+	  -D$(BUILD_DEFINE) $(OPT_FLAGS) -o "$@" "$<"
+
+$(ENGINE_EXE): $(ENGINE_OBJECT) $(LINUX_LIBRARIES)
+	mkdir -p bin
+	$(LINUX_CC) -o "$@" -Wl,--export-dynamic -Wl,--as-needed \
+	  -pie -Wl,-z,now -Wl,-z,relro "$<" $(LINUX_LIBRARIES) \
+	  -lsqlite3 -lz -lvorbis -lvorbisfile -logg -ltheora -ltheoradec \
+	  -lfreetype -lpng -lcrypt -lssl -ljpeg -lopenal -lrt -ldl -lX11 \
+	  -lncursesw -lpthread -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc
+
+# Refresh the app data archive before embedding it in the game executable.
+assets:
+	command -v "$(SEVEN_ZIP)" >/dev/null || { echo "Error: 7-Zip command '$(SEVEN_ZIP)' not found." >&2; exit 2; }
+	test -f Diggers/app.json || { echo "Error: Diggers/app.json is missing; check out the Diggers game source first." >&2; exit 2; }
+	cd Diggers
+	if [[ -f Diggers.adb ]]; then archive_action=u; else archive_action=a; fi
+	"$(SEVEN_ZIP)" -t7z -ms=off -mx9 -myx9 -m0=LZMA2:d64m:fb273 \
+	  -mhe=on -mmt=$(JOBS) -mqs -slp -ssw -sse -r "$$archive_action" Diggers.adb \
+	  '-x!*.exe' '-x!docs' '-x!*.md' '-x!*.crt' '-x!*.ico' '-x!*.dbg' \
+	  '-x!.*' '-x!prv' '-x!*.psd' '-x!*.log' '-x!*.adb' '-x!*.udb' \
+	  '-x!Diggers' '-x!Diggers32' .
+
+# Match the logged distro flow: append Diggers.adb to the ELF, then archive
+# the resulting Diggers.elf as distro/Diggers-R64-Ubuntu-X64.7z.
+$(DISTRO_ARCHIVE): $(ENGINE_EXE) assets
+	command -v "$(SEVEN_ZIP)" >/dev/null || { echo "Error: 7-Zip command '$(SEVEN_ZIP)' not found." >&2; exit 2; }
+	mkdir -p distro
+	test -f Diggers/Diggers.adb
+	tmpdir="$$(mktemp -d)"
+	trap 'rm -rfv "$$tmpdir"' EXIT
+	cp -fv "$(ENGINE_EXE)" "$$tmpdir/Diggers.elf.tmp"
+	chmod -v 755 "$$tmpdir/Diggers.elf.tmp"
+	cat "$$tmpdir/Diggers.elf.tmp" Diggers/Diggers.adb > "$$tmpdir/Diggers.elf"
+	chmod -v 755 "$$tmpdir/Diggers.elf"
+	rm -f "$@"
+	cd "$$tmpdir"
+	"$(SEVEN_ZIP)" a -t7z "$(abspath $@)" Diggers.elf
+	test -s "$(abspath $@)"
+
+clean:
+	rm -f $(ENGINE_OBJECT) $(ENGINE_EXE) $(BUILD_CONFIG_STAMP) \
+	  $(DISTRO_ARCHIVE)

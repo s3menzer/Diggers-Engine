@@ -83,13 +83,14 @@ $(ENGINE_EXE): $(ENGINE_OBJECT) $(RESOURCE_OBJECT) $(WINDOWS_LIBRARIES)
 	  -lgdi32 -limagehlp -lkernel32 -lole32 -lpsapi -lshell32 -luser32 \
 	  -luuid -lversion -lwinmm -lws2_32 -static $(RESOURCE_OBJECT)
 
-# Like the builder's G8bLVv stage, refresh the data archive from Diggers/.
+# Like the builder's G8bLVv stage, create or refresh the data archive from Diggers/.
 assets:
 	command -v "$(SEVEN_ZIP)" >/dev/null || { echo "Error: Linux 7-Zip command '$(SEVEN_ZIP)' not found." >&2; exit 2; }
-	test -f Diggers/Diggers.adb || { echo "Error: Diggers/Diggers.adb is missing." >&2; exit 2; }
+	test -f Diggers/app.json || { echo "Error: Diggers/app.json is missing; check out the Diggers game source first." >&2; exit 2; }
 	cd Diggers
+	if [[ -f Diggers.adb ]]; then archive_action=u; else archive_action=a; fi
 	"$(SEVEN_ZIP)" -t7z -ms=off -mx9 -myx9 -m0=LZMA2:d64m:fb273 \
-	  -mhe=on -mmt=$(JOBS) -mqs -slp -ssw -sse -r u Diggers.adb \
+	  -mhe=on -mmt=$(JOBS) -mqs -slp -ssw -sse -r "$$archive_action" Diggers.adb \
 	  '-x!*.exe' '-x!docs' '-x!*.md' '-x!*.crt' '-x!*.ico' '-x!*.dbg' \
 	  '-x!.*' '-x!prv' '-x!*.psd' '-x!*.log' '-x!*.adb' '-x!*.udb' \
 	  '-x!Diggers' '-x!Diggers32' .
