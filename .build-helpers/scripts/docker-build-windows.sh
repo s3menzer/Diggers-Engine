@@ -10,8 +10,8 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 Usage: .build-helpers/scripts/docker-build-windows.sh [-- COMMAND [ARGS...]]
        .build-helpers/scripts/docker-build-windows.sh clean-image
 
-With no arguments, builds Windows dependencies, the Engine build utility,
-the Diggers executable, and the Windows distributable package.
+With no arguments, builds Windows dependencies, cross-compiles the Diggers
+executable with `.build-helpers/make/makefile.windows`, and creates the Windows distro package.
 USAGE
   exit 0
 fi
@@ -39,17 +39,7 @@ if [[ "$ENGINE_NAME" == podman* ]] || grep -qi podman "$ENGINE_PATH" 2>/dev/null
   ENGINE_IS_PODMAN=1
 fi
 
-IMAGE="${WINDOWS_BUILDER_IMAGE:-mhatxotic-engine-windows-builder:trixie-mingw64}"
-WINEPREFIX_CONTAINER="${WINEPREFIX_CONTAINER:-/tmp/engine-wineprefix-$(id -u)-$$}"
-WINE_PROJECT_DIR="${WINE_PROJECT_DIR:-${WINEPREFIX_CONTAINER}/drive_c/src}"
-if [[ "$WINEPREFIX_CONTAINER" != /* ]]; then
-  echo "Error: WINEPREFIX must be an absolute container path." >&2
-  exit 2
-fi
-if [[ "$WINE_PROJECT_DIR" != "${WINEPREFIX_CONTAINER}/drive_c/"* ]]; then
-  echo "Error: WINE_PROJECT_DIR must be under '${WINEPREFIX_CONTAINER}/drive_c/'." >&2
-  exit 2
-fi
+IMAGE="${WINDOWS_BUILDER_IMAGE:-mhatxotic-engine-windows-builder:trixie-mingw64-native-2026.11}"
 
 if [[ "${1:-}" == "clean-image" ]]; then
   "$ENGINE" image rm "$IMAGE" || true
@@ -107,39 +97,18 @@ elif (($#)); then
   cat >&2 <<'USAGE'
 Usage: .build-helpers/scripts/docker-build-windows.sh [clean-image | -- COMMAND [ARGS...]]
 
-With no arguments, builds Windows dependencies, the Engine build utility,
-the Diggers executable, and the Windows distributable package.
+With no arguments, builds Windows dependencies, cross-compiles the Diggers
+executable with `.build-helpers/make/makefile.windows`, and creates the Windows distro package.
 USAGE
   exit 2
 else
 CONTAINER_BUILD_SCRIPT=$(cat <<'BUILD'
 set -euo pipefail
+mkdir -p "$HOME"
 mkdir -p ./bin ./debug
 BUILD_TARGET=windows python3 ./.build-helpers/scripts/download-linux-dependencies.py
-# The dependency runner normally installs this tool; verify it before the
-# asset build and retry directly if the generated workspace lacks it.
-if [[ ! -s ./util/7Z.EXE ]]; then
-  SEVEN_ZIP_VERSION="$(python3 -c 'import json; from pathlib import Path; print(json.loads(Path(".build-helpers/versions-linux.json").read_text())["libs"]["7zip"]["version"])')"
-  echo "[setup] util/7Z.EXE missing after dependency setup; installing pinned 7-Zip ${SEVEN_ZIP_VERSION}."
-  ./scripts/7z.sh "$SEVEN_ZIP_VERSION"
-fi
-if [[ ! -s ./util/7Z.EXE ]]; then
-  echo "Error: dependency setup did not create ./util/7Z.EXE." >&2
-  ls -la ./util ./archive 2>&1 || true
-  exit 1
-fi
-# Wine launches this PE executable from the Linux workspace mount; preserve
-# its executable bit even if an existing copy was extracted without one.
-chmod +x ./util/7Z.EXE
-if [[ ! -x ./util/7Z.EXE ]]; then
-  echo "Error: util/7Z.EXE is not executable by Wine." >&2
-  exit 1
-fi
-python3 ./.build-helpers/scripts/create-build-json.py
-./scripts/build-windows.sh "${BUILD_TYPE:-Release}"
-wine ./bin/build.exe G8bVv
-wine ./bin/build.exe G8bLVv
-wine ./bin/build.exe G8bfVv
+make --jobs="${JOBS:-8}" -f .build-helpers/make/makefile.windows windows \
+  BUILD_TYPE="${BUILD_TYPE:-Release}" JOBS="${JOBS:-8}"
 test -s ./bin/engine64.exe
 test -s ./Diggers/Diggers.adb
 mkdir -p ./distro
@@ -155,38 +124,17 @@ BUILD
   CONTAINER_COMMAND=(bash -euo pipefail -c "$CONTAINER_BUILD_SCRIPT")
 fi
 
-# Mount the workspace outside the Wine prefix. Docker creates bind-mount
-# destination parents as root; mounting below drive_c would make the prefix
-# root-owned and Wine would refuse to use it. Expose the workspace to Windows
-# processes through C:\\src with a symlink created by the container user.
-CONTAINER_COMMAND=(bash -euo pipefail -c '
-  if [[ -e "$WINEPREFIX" && "$(stat -c %u -- "$WINEPREFIX")" != "$(id -u)" ]]; then
-    echo "Error: Wine prefix is not owned by container user $(id -u): $WINEPREFIX" >&2
-    echo "Set WINEPREFIX_CONTAINER to a new writable container path." >&2
-    exit 2
-  fi
-  mkdir -p "$HOME" "$WINEPREFIX/drive_c" "$(dirname -- "$WINE_PROJECT_DIR")"
-  if [[ -e "$WINE_PROJECT_DIR" && ! -L "$WINE_PROJECT_DIR" ]]; then
-    echo "Error: WINE_PROJECT_DIR exists and is not a symlink: $WINE_PROJECT_DIR" >&2
-    echo "Use a fresh WINEPREFIX_CONTAINER or remove that old prefix." >&2
-    exit 2
-  fi
-  ln -sfn /workspace "$WINE_PROJECT_DIR"
-  cd /workspace
-  exec "$@"
-' wine-container "${CONTAINER_COMMAND[@]}")
-
 exec "$ENGINE" run --rm "${TTY_ARGS[@]}" "${RUN_ARGS[@]}" \
-  --env BUILD_DIR="${BUILD_DIR:-build-windows}" \
-  --env BUILD_TYPE="${BUILD_TYPE:-Release}" \
-  --env JOBS="${JOBS:-}" \
   --env HOME="${WINDOWS_CONTAINER_HOME:-/tmp/engine-windows-build-home}" \
-  --env WINEPREFIX="$WINEPREFIX_CONTAINER" \
-  --env WINE_PROJECT_DIR="$WINE_PROJECT_DIR" \
-  --env WINEARCH="${WINEARCH:-win64}" \
-  --env WINEDEBUG="${WINEDEBUG:-fixme-all}" \
+  --env BUILD_TYPE="${BUILD_TYPE:-Release}" \
+  --env JOBS="${JOBS:-8}" \
+  --env BUILD_DEFINE="${BUILD_DEFINE:-BETA}" \
   --env BUILD_TARGET=windows \
   --env MINGW_TARGET="${MINGW_TARGET:-x86_64-w64-mingw32}" \
+  --env MINGW_THREAD_MODEL=posix \
+  --env MINGW_CXX="${MINGW_CXX:-${MINGW_TARGET:-x86_64-w64-mingw32}-g++-posix}" \
+  --env MINGW_WINDRES="${MINGW_WINDRES:-${MINGW_TARGET:-x86_64-w64-mingw32}-windres}" \
+  --env SEVEN_ZIP="${SEVEN_ZIP:-7zz}" \
   --volume "${PROJECT_ROOT}:/workspace${VOLUME_SUFFIX}" \
   --workdir /workspace \
   "$IMAGE" "${CONTAINER_COMMAND[@]}"

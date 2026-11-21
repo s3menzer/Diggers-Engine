@@ -1,0 +1,114 @@
+# Native Linux cross-build of the Windows x64 Diggers executable.
+# Run from the Engine_3 project root (or use `make -f .build-helpers/make/makefile.windows`).
+
+SHELL := /bin/bash
+.SHELLFLAGS := -eu -o pipefail -c
+.ONESHELL:
+.DELETE_ON_ERROR:
+
+MINGW_TARGET ?= x86_64-w64-mingw32
+MINGW_THREAD_MODEL ?= posix
+MINGW_CXX ?= $(MINGW_TARGET)-g++-$(MINGW_THREAD_MODEL)
+MINGW_WINDRES ?= $(MINGW_TARGET)-windres
+SEVEN_ZIP ?= 7zz
+BUILD_TYPE ?= Release
+BUILD_DEFINE ?= BETA
+JOBS ?= 8
+
+ENGINE_OBJECT := debug/engine64.o
+RESOURCE_OBJECT := debug/engine.res
+ENGINE_EXE := bin/engine64.exe
+DISTRO_ARCHIVE := distro/Diggers-R64-Windows-X64.7z
+BUILD_CONFIG_STAMP := build-windows/.makefile-windows-config
+WINDOWS_LIBRARIES := \
+	lib/win64/al64.la \
+	lib/win64/ft64.la \
+	lib/win64/glfw64.la \
+	lib/win64/jpeg64.la \
+	lib/win64/lua64.la \
+	lib/win64/lzma64.la \
+	lib/win64/nsgif64.la \
+	lib/win64/ogg64.la \
+	lib/win64/png64.la \
+	lib/win64/sdl64.la \
+	lib/win64/sqlite64.la \
+	lib/win64/ssl64.la \
+	lib/win64/theora64.la \
+	lib/win64/zlib64.la
+
+ifeq ($(filter $(BUILD_TYPE),Release release),)
+  ifneq ($(filter $(BUILD_TYPE),Debug debug),)
+    OPT_FLAGS := -O0 -fno-omit-frame-pointer
+  else
+    $(error Unsupported BUILD_TYPE '$(BUILD_TYPE)' (expected Release or Debug))
+  endif
+else
+  OPT_FLAGS := -O2
+endif
+
+ifeq ($(filter $(BUILD_DEFINE),RELEASE ALPHA BETA),)
+  $(error Unsupported BUILD_DEFINE '$(BUILD_DEFINE)' (expected RELEASE, ALPHA, or BETA))
+endif
+
+.PHONY: all windows assets clean FORCE
+all: windows
+windows: $(DISTRO_ARCHIVE)
+
+FORCE:
+
+$(BUILD_CONFIG_STAMP): FORCE
+	mkdir -p build-windows
+	printf '%s\n' '$(BUILD_TYPE)|$(BUILD_DEFINE)|$(MINGW_CXX)|$(MINGW_WINDRES)' > "$@.tmp"
+	if ! cmp -s "$@.tmp" "$@"; then mv -f "$@.tmp" "$@"; else rm -f "$@.tmp"; fi
+
+$(ENGINE_OBJECT): src/engine.cpp $(BUILD_CONFIG_STAMP) $(RESOURCE_OBJECT) $(shell find src include -type f \( -name '*.hpp' -o -name '*.h' \) -print 2>/dev/null)
+	mkdir -p debug bin
+	$(MINGW_CXX) -c -mthreads -fmax-errors=1 -DAL_LIBTYPE_STATIC \
+	  -Idebug/rc/include -Iinclude/win64 -Iinclude/win64/ft \
+	  -Iinclude -Iinclude/ft \
+	  -std=c++20 -m64 -D$(BUILD_DEFINE) -g $(OPT_FLAGS) -fno-rtti \
+	  -o "$@" "$<"
+
+$(RESOURCE_OBJECT): win32/engine.rc src/engine.hpp scripts/build-windows.sh $(BUILD_CONFIG_STAMP)
+	mkdir -p debug
+	BUILD_DIR=debug RESOURCE_DEFINE=$(BUILD_DEFINE) CXX="$(MINGW_CXX)" \
+	  WINDRES="$(MINGW_WINDRES)" ./scripts/build-windows.sh res
+
+$(ENGINE_EXE): $(ENGINE_OBJECT) $(RESOURCE_OBJECT) $(WINDOWS_LIBRARIES)
+	mkdir -p bin
+	$(MINGW_CXX) -static -static-libgcc -static-libstdc++ -m64 -mwindows \
+	  -municode -o "$@" -Wl,--gc-sections "$<" \
+	  $(WINDOWS_LIBRARIES) -Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic \
+	  -ladvapi32 -lavrt -lbcrypt -lcomctl32 -lcrypt32 -ldbghelp -ldsound \
+	  -lgdi32 -limagehlp -lkernel32 -lole32 -lpsapi -lshell32 -luser32 \
+	  -luuid -lversion -lwinmm -lws2_32 -static $(RESOURCE_OBJECT)
+
+# Like the builder's G8bLVv stage, refresh the data archive from Diggers/.
+assets:
+	command -v "$(SEVEN_ZIP)" >/dev/null || { echo "Error: Linux 7-Zip command '$(SEVEN_ZIP)' not found." >&2; exit 2; }
+	test -f Diggers/Diggers.adb || { echo "Error: Diggers/Diggers.adb is missing." >&2; exit 2; }
+	cd Diggers
+	"$(SEVEN_ZIP)" -t7z -ms=off -mx9 -myx9 -m0=LZMA2:d64m:fb273 \
+	  -mhe=on -mmt=$(JOBS) -mqs -slp -ssw -sse -r u Diggers.adb \
+	  '-x!*.exe' '-x!docs' '-x!*.md' '-x!*.crt' '-x!*.ico' '-x!*.dbg' \
+	  '-x!.*' '-x!prv' '-x!*.psd' '-x!*.log' '-x!*.adb' '-x!*.udb' \
+	  '-x!Diggers' '-x!Diggers32' .
+
+# The executable overlay embeds the refreshed archive, then the outer 7z is
+# the installable distro artifact just as in the logged build stages.
+$(DISTRO_ARCHIVE): $(ENGINE_EXE) assets
+	mkdir -p distro
+	test -f Diggers/Diggers.adb
+	rm -f "$@" Diggers.exe.tmp Diggers.exe
+	trap 'rm -f Diggers.exe.tmp Diggers.exe' EXIT
+	cat "$(ENGINE_EXE)" Diggers/Diggers.adb > Diggers.exe.tmp
+	mv -f Diggers.exe.tmp Diggers.exe
+	"$(SEVEN_ZIP)" a -t7z "$@" Diggers.exe
+	rm -f Diggers.exe
+	trap - EXIT
+	test -s "$@"
+
+clean:
+	rm -f $(ENGINE_OBJECT) $(RESOURCE_OBJECT) $(ENGINE_EXE) \
+	  build-windows/.makefile-windows-config Diggers.exe Diggers.exe.tmp \
+	  $(DISTRO_ARCHIVE)

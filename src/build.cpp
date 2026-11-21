@@ -2045,13 +2045,34 @@ static void DoClean(const StrVector svExts, const StdString &strDir)
 static FILE *POpen(const StdString &strCL) { return StdPOpen(strCL); }
 /* -- Close a process output stream ---------------------------------------- */
 static int PClose(FILE*const fHandle) { return StdPClose(fHandle); }
+/* -- Append to the build command log ------------------------------------- */
+static void BuildCommandLogWrite(const StdString &strText)
+{ // Log all process commands in the project root, even when the builder has
+  // changed directory to a sub-project. Append across builder invocations so
+  // a multi-step build that launches build.elf/build.exe repeatedly is intact.
+  static bool bFirstWrite = true;
+  const bool bBaseHasSeparator = !strBaseDir.empty() &&
+    (strBaseDir.back() == '/' || strBaseDir.back() == '\\');
+  const StdString strLogFile{ StrAppend(strBaseDir,
+    bBaseHasSeparator ? "" : "/", "build-commands.log") };
+  FStream fsLog{ strLogFile, FM_A_T };
+  if(bFirstWrite)
+  { const StdString strInvocation{ "\n--- Builder invocation ---\n" };
+    if(fsLog.FStreamWriteStringSafe(strInvocation) != strInvocation.size())
+      XCL("Failed to write build command log!", "File", strLogFile);
+    bFirstWrite = false;
+  }
+  if(fsLog.FStreamWriteStringSafe(strText) != strText.size())
+    XCL("Failed to write build command log!", "File", strLogFile);
+}
 /* ------------------------------------------------------------------------- */
 static int SpecialExecute(const StdString strCmd, const size_t stML,
   const bool bErrOverride = false, const bool bKeepStderrSeparate = false)
 { // Clear error number
   StdSetError(0);
-  // Write string tidily
-  ConWrite(StrAppend("*** ", strCmd));
+  // Record exact command and working directory instead of printing it.
+  BuildCommandLogWrite(StrFormat("[cwd] $\n[command] $\n",
+    DirGetCWD(), strCmd));
   // Record current time
   const ClkTimePoint tpBegin{ cmHiRes.GetTime() };
   // Execute process and capture output. throw StdRunTimeError if failed
@@ -2090,12 +2111,16 @@ static int SpecialExecute(const StdString strCmd, const size_t stML,
   catch(const StdException &) {}
   // Close pipe and return result
   const int iR = PClose(fpPipe);
+  // Record the result and elapsed time
+  const StdString strElapsed{
+    durLong.Parse(cmHiRes.TimePointToDouble(tpBegin), 6) };
+  BuildCommandLogWrite(StrFormat("[exit status] $; elapsed $s\n\n",
+    iR, strElapsed));
   // Print result if not successful
   cout << "*** Execution terminated ";
   if(iR) cout << "with status " << iR;
     else cout << "successfully";
-  cout << " in " <<
-    durLong.Parse(cmHiRes.TimePointToDouble(tpBegin), 6) << "!\n";
+  cout << " in " << strElapsed << "!\n";
   // Return result
   return iR;
 }

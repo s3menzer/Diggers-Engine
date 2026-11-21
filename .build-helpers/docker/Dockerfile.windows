@@ -1,11 +1,18 @@
-# Debian Trixie is used for its MinGW-w64 cross toolchain. The tag is
-# intentionally movable; rebuild the image to pick up security updates.
+# Linux-hosted MinGW cross toolchain: the Windows target is built with native
+# Linux tools and no Windows compiler binary or Wine runtime is required.
+# Debian's Trixie tag is intentionally movable; see README-windows.md.
 FROM debian:trixie-slim
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    MINGW_TARGET=x86_64-w64-mingw32 \
+    MINGW_THREAD_MODEL=posix \
+    CC=x86_64-w64-mingw32-gcc-posix \
+    CXX=x86_64-w64-mingw32-g++-posix \
+    AR=x86_64-w64-mingw32-ar \
+    RANLIB=x86_64-w64-mingw32-ranlib \
+    WINDRES=x86_64-w64-mingw32-windres \
+    CROSS_COMPILE=x86_64-w64-mingw32-
 
-# OpenAL's static C++ objects must match the Wine compiler's POSIX threading
-# runtime, so install that MinGW variant in addition to the default variant.
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
         autoconf \
@@ -15,9 +22,7 @@ RUN apt-get update \
         ca-certificates \
         cmake \
         curl \
-        g++-mingw-w64-x86-64 \
         g++-mingw-w64-x86-64-posix \
-        gcc-mingw-w64-x86-64 \
         gcc-mingw-w64-x86-64-posix \
         git \
         libtool \
@@ -35,38 +40,6 @@ RUN apt-get update \
         7zip \
     && ln -s "$(command -v 7z)" /usr/local/bin/7zz \
     && rm -rf /var/lib/apt/lists/*
-
-# Keep Wine in a separate layer so changes to the builder toolchain don't
-# force a full re-download of the MinGW build dependencies.
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y wine wine64 \
-    && rm -rf /var/lib/apt/lists/*
-
-# This is a Windows-hosted MinGW toolchain: unlike Debian's cross-compiler
-# (Linux ELF binaries), these compiler executables can be launched by Wine.
-ARG WINLIBS_RELEASE=14.2.0posix-19.1.7-12.0.0-msvcrt-r3
-ARG WINLIBS_ARCHIVE=winlibs-x86_64-posix-seh-gcc-14.2.0-mingw-w64msvcrt-12.0.0-r3.7z
-ARG WINLIBS_SHA256=08daea22ef9f97d9e4da196dc9ad2e5422f20209ad90cd43da1ecc608398be4a
-RUN set -eu; \
-    archive="/tmp/${WINLIBS_ARCHIVE}"; \
-    url="https://github.com/brechtsanders/winlibs_mingw/releases/download/${WINLIBS_RELEASE}/${WINLIBS_ARCHIVE}"; \
-    curl --fail --location --retry 3 --output "$archive" "$url"; \
-    printf '%s  %s\n' "$WINLIBS_SHA256" "$archive" | sha256sum --check --status; \
-    mkdir -p /opt/winlibs; \
-    7z x "$archive" -o/opt/winlibs -y >/dev/null; \
-    test -f /opt/winlibs/mingw64/bin/g++.exe; \
-    test -f /opt/winlibs/mingw64/bin/windres.exe; \
-    test -f /opt/winlibs/mingw64/bin/ar.exe; \
-    rm -f "$archive"
-
-ENV MINGW_TARGET=x86_64-w64-mingw32 \
-    WINE_MINGW_ROOT=Z:/opt/winlibs/mingw64 \
-    CC=x86_64-w64-mingw32-gcc \
-    CXX=x86_64-w64-mingw32-g++ \
-    AR=x86_64-w64-mingw32-ar \
-    RANLIB=x86_64-w64-mingw32-ranlib \
-    WINDRES=x86_64-w64-mingw32-windres \
-    CROSS_COMPILE=x86_64-w64-mingw32-
 
 WORKDIR /tmp
 CMD ["bash", "-i"]

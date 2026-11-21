@@ -51,6 +51,18 @@ case "${MODE,,}" in
     ;;
 esac
 
+# The native Windows game makefile builds the beta game directly, while still
+# reusing this script's case-correct resource include setup.
+if [[ "$BUILD_MODE" == resources && -n "${RESOURCE_DEFINE:-}" ]]; then
+  case "$RESOURCE_DEFINE" in
+    RELEASE|ALPHA|BETA) BUILD_DEFINE="$RESOURCE_DEFINE" ;;
+    *)
+      echo "Error: RESOURCE_DEFINE must be RELEASE, ALPHA, or BETA." >&2
+      exit 2
+      ;;
+  esac
+fi
+
 for tool in "$CXX" "$WINDRES"; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "Error: required Windows cross-tool '$tool' is not in PATH." >&2
@@ -69,8 +81,8 @@ mkdir -p "$BUILD_ROOT/bin" "$BUILD_ROOT/rc/include" \
 
 # The upstream .rc uses Windows case-insensitive include and asset paths.
 # Provide case-correct aliases in the build directory. `include_next` is
-# required because Wine's Windows-style lookup can match the differently-cased
-# alias itself when it forwards to the real system header.
+# required because the compiler's case-sensitive filesystem lookup can match
+# the differently-cased alias itself when it forwards to the real system header.
 ln -sfn "$PROJECT_ROOT/src/engine.hpp" "$BUILD_ROOT/rc/include/Engine.HPP"
 printf '#include_next <windows.h>\n' > "$BUILD_ROOT/rc/include/Windows.H"
 # Remove any lowercase copy from an earlier/manual setup; on Windows it aliases
